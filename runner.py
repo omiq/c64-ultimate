@@ -1,6 +1,12 @@
+import os
 import sys
 import requests
+import loadenv
+from dotenv import load_dotenv
 
+load_dotenv()
+
+C64U_PASSWORD = os.getenv("C64U_PASSWORD")
 
 def run_prg(reader):
     """
@@ -18,7 +24,8 @@ def run_prg(reader):
     url = "http://192.168.0.64/v1/runners:run_prg"
     
     headers = {
-        "Content-Type": "application/octet-stream"
+        "Content-Type": "application/octet-stream",
+        'X-Password': C64U_PASSWORD
     }
     
     # If reader is bytes, use it directly; otherwise read from file-like object
