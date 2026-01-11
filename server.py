@@ -1,13 +1,19 @@
 
 from datetime import datetime
+import os
 import socket
 import requests
 import asyncio
+import loadenv
+from dotenv import load_dotenv
 
+load_dotenv()
+
+API_KEY = os.getenv("API_KEY")
 
 def getweather():
     # openweathermap API key
-    key = "edb494ea3bb6fa24a72671aa3152150e"
+    key = API_KEY
     location = "york"
     weather_url = "http://api.openweathermap.org/data/2.5/weather?q=%s&APPID=%s&units=metric" % (location, key)
     weather_data = requests.get(weather_url).json()
