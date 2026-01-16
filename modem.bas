@@ -7,9 +7,8 @@
 10 get k$:rem get from c64 keyboard
 11 if k$ = chr$(13) then print#2,chr$(10)+chr$(13);
 12 if k$<>"" and k$ <> chr$(13) then print#2,k$;
-13 get#2,s$: rem get byte from serial
-14 print s$;
-15 if (peek(673)and1)then goto 13:rem wait until all chars transmitted
+13 get#2,c$: s$=s$+c$
+14 if (peek(663) and 8) <> 0 then goto 13:rem wait until all chars transmitted
+15 print s$;:s$="":rem print received chars
 16 goto 10
 17 close 2:end
-
