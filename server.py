@@ -56,7 +56,6 @@ while True:
             
             w = getweather().upper()
             d = datetime.now().strftime("%Y-%m-%d")
-
             out = CRLF + w + CRLF + d + CRLF
             safe_send(conn, out + CRLF)
             

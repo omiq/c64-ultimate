@@ -3,7 +3,7 @@
 30 sr=56833
 40 cm=56834
 50 ct=56835
-60 print chr$(147)
+60 print chr$(147);chr$(5);
 70 print "swiftlink tcp test"
 80 rem reset acia
 90 poke sr,0
