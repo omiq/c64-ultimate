@@ -96,7 +96,7 @@ while True:
 
             print("Incoming connection from", client_addr)
 
-            safe_send_text(client_socket, "CONNECTED" + CRLF)
+            safe_send_text(client_socket, "#OK#" + CRLF)
             safe_send_text(client_socket, "WELCOME TO THE WEATHER SERVER" + CRLF)
             safe_send_text(client_socket, build_payload() + CRLF)
             continue

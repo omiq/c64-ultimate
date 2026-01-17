@@ -20,13 +20,6 @@
 160 rem 19,200 baud setting doubled by SwiftLink crystal = 38,400
 170 poke ct,31
 
-175 rem flush old receive data from any previous session
-176 s=peek(sr)
-177 if (s and 8)=0 then 179
-178 dummy=peek(dr):goto 176
-179 rem now dial
-
-
 180 rem COMMAND REGISTER
 190 rem no parity, no echo, DTR on, receive enabled
 200 poke cm,9
@@ -40,10 +33,10 @@
 260 gosub 700
 
 270 rem DIAL TCP SERVER (IP:PORT)
-280 ts$="atdt 192.168.0.154:6464"+chr$(13)
+280 ts$="atdt 192.168.0.154:6464"+chr$(13)+chr$(13)+chr$(13)
 290 gosub 700
 
-300 print
+300 t$=""
 310 print "connected"
 
 320 rem ------------------------------------------------------------
