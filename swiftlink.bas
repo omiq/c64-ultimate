@@ -18,12 +18,8 @@
 180 rem dial tcp
 190 ts$="atdt 192.168.0.154:6464"+chr$(13)
 200 gosub 700
-201 rem wait for dcd (carrier)
-202 s=peek(st)
-203 if (s and 32)=0 then 202
-204 for i=1 to 200:next
-205 s=peek(st)
-206 s=peek(st)
+205 for i=1 to 2000:next
+206 s=peek(sr):s=peek(sr)
 210 print "connected, listening..."
 220 rem main read loop
 230 s=peek(sr)

@@ -53,6 +53,13 @@ while True:
             print("Incoming connection from", addr)
             safe_send(conn, "CONNECTED" + CRLF)
             safe_send(conn, "WELCOME TO THE WEATHER SERVER" + CRLF)
+            
+            w = getweather().upper()
+            d = datetime.now().strftime("%Y-%m-%d")
+
+            out = CRLF + w + CRLF + d + CRLF
+            safe_send(conn, out + CRLF)
+            
             continue
 
         conn = sock
@@ -93,10 +100,7 @@ while True:
             msg = line.decode("ascii", "ignore").strip()
             print(">", msg)
 
-            w = getweather().upper()
-            d = datetime.now().strftime("%Y-%m-%d")
-
-            out = CRLF + w + CRLF + d + CRLF
+            
             if not safe_send(conn, out):
                 conns.remove(conn)
                 bufs.pop(conn, None)
