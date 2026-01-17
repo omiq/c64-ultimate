@@ -1,61 +1,109 @@
-
 from datetime import datetime
 import os
 import socket
 import requests
-import asyncio
-import loadenv
+import select
 from dotenv import load_dotenv
 
 load_dotenv()
-
 API_KEY = os.getenv("API_KEY")
 
-def getweather():
-    # openweathermap API key
-    key = API_KEY
-    location = "york"
-    weather_url = "http://api.openweathermap.org/data/2.5/weather?q=%s&APPID=%s&units=metric" % (location, key)
-    weather_data = requests.get(weather_url).json()
-    weather = weather_data['weather'][0]['main']
-    print(weather)
-    return("The weather in %s is %s %dc\n\r" % (location, weather, int(weather_data['main']['temp'])))
+CRLF = "\r\n"
 
+def getweather():
+    location = "york"
+    weather_url = (
+        "http://api.openweathermap.org/data/2.5/weather"
+        f"?q={location}&APPID={API_KEY}&units=metric"
+    )
+    r = requests.get(weather_url, timeout=10)
+    j = r.json()
+    weather = j["weather"][0]["main"]
+    temp_c = int(j["main"]["temp"])
+    return f"The weather in {location} is {weather} {temp_c}c"
+
+def safe_send(conn, text):
+    try:
+        conn.sendall(text.encode("ascii", "replace"))
+        return True
+    except (BrokenPipeError, ConnectionResetError, OSError):
+        return False
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+server.bind(("", 6464))
+server.listen(256)
 server.setblocking(False)
 
-print(server.bind(("", 6464)) )
+print("Listening on port 6464")
 
-server.listen(256)
-
-connections = []
-
-
+conns = []
+bufs = {}
 
 while True:
-    try:
-        connection, address = server.accept()
-        print("Incoming connection from ", address)
-        connection.send(b"CONNECTED\n\r")
+    rlist = [server] + conns
+    readable, _, _ = select.select(rlist, [], [], 0.1)
 
-        connection.setblocking(False)
-        connections.append(connection)
-    except BlockingIOError:
-        pass
-
-    for connection in connections:
-        try:
-            message = connection.recv(4096)
-        except BlockingIOError:
+    for sock in readable:
+        if sock is server:
+            conn, addr = server.accept()
+            conn.setblocking(False)
+            conns.append(conn)
+            bufs[conn] = bytearray()
+            print("Incoming connection from", addr)
+            safe_send(conn, "CONNECTED" + CRLF)
+            safe_send(conn, "WELCOME TO THE WEATHER SERVER" + CRLF)
             continue
 
-        message=message.strip().decode('ascii')
-        print("\n\r>",message)
-        connection.send( bytes("\n\r"+getweather().upper() + "\n\r",'ascii') )
-        now = datetime.now()
-        current_date = now.strftime("%Y-%m-%d")
-        print("\n\rCurrent Date =", current_date)
-        connection.send( bytes("\n\r"+current_date + "\n\r",'ascii') )
+        conn = sock
+        try:
+            data = conn.recv(4096)
+        except BlockingIOError:
+            continue
+        except (ConnectionResetError, OSError):
+            data = b""
 
+        if data == b"":
+            conns.remove(conn)
+            bufs.pop(conn, None)
+            try:
+                conn.close()
+            except OSError:
+                pass
+            print("Client disconnected")
+            continue
+
+        bufs[conn].extend(data)
+
+        while True:
+            b = bufs[conn]
+            i = min(
+                [x for x in (b.find(b"\r"), b.find(b"\n")) if x != -1],
+                default=-1
+            )
+            if i == -1:
+                break
+
+            line = bytes(b[:i])
+            del b[:i + 1]
+
+            if b[:1] in (b"\r", b"\n"):
+                del b[:1]
+
+            msg = line.decode("ascii", "ignore").strip()
+            print(">", msg)
+
+            w = getweather().upper()
+            d = datetime.now().strftime("%Y-%m-%d")
+
+            out = CRLF + w + CRLF + d + CRLF
+            if not safe_send(conn, out):
+                conns.remove(conn)
+                bufs.pop(conn, None)
+                try:
+                    conn.close()
+                except OSError:
+                    pass
+                print("Client dropped during send")
+                break
 
