@@ -18,7 +18,7 @@
 140 rem CONTROL REGISTER
 150 rem 31 = 8 data bits, 1 stop bit, internal clock,
 160 rem 19,200 baud setting doubled by SwiftLink crystal = 38,400
-170 poke ct,16:rem poke ct,31 on c64u
+170 poke ct,18:rem poke ct,31 for full speed on c64u
 
 180 rem COMMAND REGISTER
 190 rem no parity, no echo, DTR on, receive enabled
