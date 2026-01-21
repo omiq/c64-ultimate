@@ -54,7 +54,13 @@ def send_text(client_socket: socket.socket, text: str):
     client_socket.sendall(text.encode("ascii", "replace"))
 
 
-def build_payload() -> str:
+def disconnect_client(client_socket: socket.socket):
+    """Disconnect a client."""
+    client_socket.close()
+    clients.remove(client_socket)
+    receive_buffers.pop(client_socket, None)
+
+def weather_and_date() -> str:
     """
     Build the response we send back to the C64.
     """
@@ -94,33 +100,8 @@ while True:
             send_text(client_socket, "#OK#" + CRLF)
             send_text(client_socket, "WELCOME TO THE SERVER" + CRLF)
             wotd_result = wotd.get_word_of_the_day()
-            if wotd_result:
-                send_text(client_socket, f"{wotd_result['title']}\n{wotd_result['description']}" + CRLF)
-            else:
-                send_text(client_socket, "FAIL" + CRLF)
-            continue
+            send_text(client_socket, f"{wotd_result['title']}\n{wotd_result['description']}" + CRLF)
+            #send_text(client_socket, weather_and_date() + CRLF)
 
-        # Existing client has sent data
-        client_socket = sock
-        data = client_socket.recv(RECV_BYTES)
-
-        # recv() returns b"" when the client has disconnected 
-        if data == b"":
-            print("Client disconnected")
-            clients.remove(client_socket)
-            receive_buffers.pop(client_socket, None)
-            client_socket.close()
-            continue
-
-        # Accumulate data
-        receive_buffers[client_socket].extend(data)
-        buf = receive_buffers[client_socket]
-        message = buf.decode("ascii", "ignore").strip()
-        
-        # > indicates data received from client
-        print(">", message)
-
-        # Clear buffer and reply with fresh weather/date
-        receive_buffers[client_socket] = bytearray()
-        payload = build_payload()
-        send_text(client_socket, payload)
+        disconnect_client(client_socket)
+        continue
