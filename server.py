@@ -18,6 +18,7 @@ import os
 import socket
 import select
 import requests
+import wotd
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -48,15 +49,9 @@ def fetch_weather_line() -> str:
     return f"The weather in {LOCATION} is {condition} {temp_c}c"
 
 
-def safe_send_text(client_socket: socket.socket, text: str) -> bool:
-    """
-    Send text to a client. Returns False if the client is dropped.
-    """
-    try:
-        client_socket.sendall(text.encode("ascii", "replace"))
-        return True
-    except (BrokenPipeError, ConnectionResetError, OSError):
-        return False
+def send_text(client_socket: socket.socket, text: str):
+    """Send text to a client."""
+    client_socket.sendall(text.encode("ascii", "replace"))
 
 
 def build_payload() -> str:
@@ -96,76 +91,36 @@ while True:
 
             print("Incoming connection from", client_addr)
 
-            safe_send_text(client_socket, "#OK#" + CRLF)
-            safe_send_text(client_socket, "WELCOME TO THE WEATHER SERVER" + CRLF)
-            safe_send_text(client_socket, build_payload() + CRLF)
+            send_text(client_socket, "#OK#" + CRLF)
+            send_text(client_socket, "WELCOME TO THE SERVER" + CRLF)
+            wotd_result = wotd.get_word_of_the_day()
+            if wotd_result:
+                send_text(client_socket, f"{wotd_result['title']}\n{wotd_result['description']}" + CRLF)
+            else:
+                send_text(client_socket, "FAIL" + CRLF)
             continue
 
         # Existing client has sent data
         client_socket = sock
+        data = client_socket.recv(RECV_BYTES)
 
-        try:
-            data = client_socket.recv(RECV_BYTES)
-        except BlockingIOError:
-            continue
-        except (ConnectionResetError, OSError):
-            data = b""
-
-        # recv() returns b"" (b=bytes)when the client has disconnected 
+        # recv() returns b"" when the client has disconnected 
         if data == b"":
             print("Client disconnected")
-            try:
-                clients.remove(client_socket)
-            except ValueError:
-                pass
+            clients.remove(client_socket)
             receive_buffers.pop(client_socket, None)
-            try:
-                client_socket.close()
-            except OSError:
-                pass
+            client_socket.close()
             continue
 
-        # Accumulate data (non-blocking sockets can deliver partial lines)
+        # Accumulate data
         receive_buffers[client_socket].extend(data)
+        buf = receive_buffers[client_socket]
+        message = buf.decode("ascii", "ignore").strip()
+        
+        # > indicates data received from client
+        print(">", message)
 
-        # Process complete lines, split on CR or LF
-        while True:
-            buf = receive_buffers[client_socket]
-            cr_pos = buf.find(b"\r")
-            lf_pos = buf.find(b"\n")
-
-            # Find the earliest line break (CR or LF)
-            breaks = [p for p in (cr_pos, lf_pos) if p != -1]
-            if not breaks:
-                break
-
-            # cut = the position in the receive buffer where a line break occurs
-            cut = min(breaks)
-            line_bytes = bytes(buf[:cut])
-            del buf[:cut + 1]
-
-            # Ignore any second newline char (CRLF or LFCR) so we don't get empty lines
-            if buf[:1] in (b"\r", b"\n"):
-                del buf[:1]
-
-            # Message is the line we received but decoded to ASCII and stripped
-            message = line_bytes.decode("ascii", "ignore").strip()
-            
-            # > indicates data received from client
-            print(">", message)
-
-            # Each time we receive a line, just reply with fresh weather/date
-            # (for now)
-            payload = build_payload()
-            if not safe_send_text(client_socket, payload):
-                print("Client dropped during send")
-                try:
-                    clients.remove(client_socket)
-                except ValueError:
-                    pass
-                receive_buffers.pop(client_socket, None)
-                try:
-                    client_socket.close()
-                except OSError:
-                    pass
-                break
+        # Clear buffer and reply with fresh weather/date
+        receive_buffers[client_socket] = bytearray()
+        payload = build_payload()
+        send_text(client_socket, payload)
