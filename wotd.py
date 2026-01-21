@@ -6,6 +6,7 @@ Fetches the word of the day from the Merriam-Webster RSS feed.
 
 import requests
 import xml.etree.ElementTree as ET
+import re
 from typing import Dict, Optional
 
 
@@ -49,16 +50,40 @@ def get_word_of_the_day() -> Optional[Dict[str, str]]:
         
         title = title_elem.text.strip() if title_elem.text else ""
         
-        # Description contains HTML, we'll return it as-is
-        # You can parse it further if needed
-        description = description_elem.text.strip() if description_elem.text else ""
+        # Parse HTML description to extract just the definition
+        description_html = description_elem.text.strip() if description_elem.text else ""
+        
+        # Extract definition from HTML using regex
+        # The definition is in a <p> tag and typically starts with "To [word]", "A [word]", etc.
+        # Look for <p> tags that contain definition-like text
+        definition_pattern = r'<p>(To [^<]+(?:is|are|refers|means)[^<]+\.)</p>'
+        match = re.search(definition_pattern, description_html, re.IGNORECASE)
+        
+        if match:
+            definition = match.group(1)
+            # Clean up any HTML entities
+            definition = definition.replace('&nbsp;', ' ').replace('&#149;', '')
+            definition = re.sub(r'<[^>]+>', '', definition)  # Remove any remaining HTML tags
+        else:
+            # Fallback: try to find any <p> tag that looks like a definition
+            # Pattern: starts with To/A/An/The followed by the word
+            fallback_pattern = r'<p>((?:To|A|An|The)\s+[^<]+\.)</p>'
+            match = re.search(fallback_pattern, description_html, re.IGNORECASE)
+            if match:
+                definition = match.group(1)
+                definition = definition.replace('&nbsp;', ' ').replace('&#149;', '')
+                definition = re.sub(r'<[^>]+>', '', definition)
+            else:
+                definition = ""
+        
+        definition = definition.strip()
         
         return {
             'title': title,
-            'description': description
+            'description': definition
         }
         
-    except (requests.RequestException, ET.ParseError, AttributeError) as e:
+    except (requests.RequestException, ET.ParseError, AttributeError, Exception) as e:
         print(f"Error fetching word of the day: {e}")
         return None
 
@@ -67,7 +92,6 @@ if __name__ == "__main__":
     # Test the function
     result = get_word_of_the_day()
     if result:
-        print(f"Word of the Day: {result['title']}")
-        print(f"\nDescription:\n{result['description']}")
+        print(f"{result['title']}\n{result['description']}")
     else:
         print("Failed to fetch word of the day")
