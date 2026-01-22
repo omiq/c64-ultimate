@@ -97,9 +97,9 @@ while True:
 
             print("Incoming connection from", client_addr)
 
-            send_text(client_socket, "#OK#" + CRLF)
+            send_text(client_socket, "#OK#")
             wotd_result = wotd.get_word_of_the_day()
-            send_text(client_socket, f"{wotd_result['title'].upper()}\n{wotd_result['description'].upper()}" + CRLF)
+            send_text(client_socket, f"#{wotd_result['title'].upper()}#{wotd_result['description'].upper()}#" + CRLF)
             #send_text(client_socket, "WELCOME TO THE WEATHER SERVER" + CRLF)
             #send_text(client_socket, weather_and_date() + CRLF)
 
