@@ -33,7 +33,7 @@ def get_word_of_the_day() -> Optional[Dict[str, str]]:
         
         # Parse the XML/RSS feed
         root = ET.fromstring(response.content)
-        
+      
         # Find the first item (most recent word of the day)
         # RSS items are typically in the channel/item path
         item = root.find('.//item')
@@ -53,10 +53,11 @@ def get_word_of_the_day() -> Optional[Dict[str, str]]:
         # Parse HTML description to extract just the definition
         description_html = description_elem.text.strip() if description_elem.text else ""
         
+
         # Extract definition from HTML using regex
         # The definition is in a <p> tag and typically starts with "To [word]", "A [word]", etc.
         # Look for <p> tags that contain definition-like text
-        definition_pattern = r'<p>(To [^<]+(?:is|are|refers|means)[^<]+\.)</p>'
+        definition_pattern = r'<p>(To [^<]+(?:is|are|refers|means|is a)[^<]+\.)</p>'
         match = re.search(definition_pattern, description_html, re.IGNORECASE)
         
         if match:
@@ -64,20 +65,27 @@ def get_word_of_the_day() -> Optional[Dict[str, str]]:
             # Clean up any HTML entities
             definition = definition.replace('&nbsp;', ' ').replace('&#149;', '')
             definition = re.sub(r'<[^>]+>', '', definition)  # Remove any remaining HTML tags
+            print("Match Found:")
         else:
             # Fallback: try to find any <p> tag that looks like a definition
             # Pattern: starts with To/A/An/The followed by the word
-            fallback_pattern = r'<p>((?:To|A|An|The)\s+[^<]+\.)</p>'
+            fallback_pattern = r'<p>((?:To|A|An|The|adjective)\s+[^<]+\.)</p>'
             match = re.search(fallback_pattern, description_html, re.IGNORECASE)
             if match:
                 definition = match.group(1)
                 definition = definition.replace('&nbsp;', ' ').replace('&#149;', '')
                 definition = re.sub(r'<[^>]+>', '', definition)
+                print("Fallback Found:")
             else:
-                definition = ""
+                definition = description_html.splitlines()[9]
+                definition = definition.replace('&nbsp;', ' ').replace('&#149;', '')
+                definition = re.sub(r'<[^>]+>', '', definition)
+                print("Match NOT Found:")
         
         definition = definition.strip()
         
+        print(title,definition)
+
         return {
             'title': title,
             'description': definition
