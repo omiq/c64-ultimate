@@ -2,9 +2,9 @@ import mysql.connector
 import socket
 import time
 import os
+import sys
 from _thread import *
 from funct import *
-import wotd
 import traceback
 from datetime import datetime
 # GLOBAL VARIABLES
@@ -31,7 +31,7 @@ try:
     BBS.setsockopt(socket.IPPROTO_TCP,socket.TCP_NODELAY,True)
 except socket.error as e:
     print("Connection error detected ->", str(e))
-    exit(1)
+    sys.exit(1)
 
 print('SERVER > Waiting for a Connection..\r')
 
@@ -39,15 +39,8 @@ BBS.listen()
 
 def do_welcome(connection):
 
-  wotd_header = f"Today is {datetime.now().strftime('%Y-%m-%d')} and here is your word of the day!\n"
 
-  send_line(connection, wotd_header)
-
-  send_line(connection, "#OK#")
-  wotd_result = wotd.get_word_of_the_day()
-  wotd_string = f"#{wotd_result['title'].upper()}#{wotd_result['description'].upper()}#\n"
-  send_line(connection, wotd_string)
-
+  send_line(connection, "\n\nWelcome! Press a key to continue...\n")
   get_char(connection)
   #CLEAR SCREEN
   send_control_code(connection, "clear") #sends a coded cursor
