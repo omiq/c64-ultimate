@@ -33,7 +33,7 @@
 260 gosub 700
 
 270 rem DIAL TCP SERVER (IP:PORT)
-280 ts$="atdt 192.168.0.154:6464"+chr$(13)+chr$(13)+chr$(13)
+280 ts$="atdt bbs.retrogamecoders.com:6464"+chr$(13)+chr$(13)+chr$(13)
 290 gosub 700
 
 300 t$=""
