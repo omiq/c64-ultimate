@@ -4,13 +4,16 @@ import time
 import os
 from _thread import *
 from funct import *
-
+import wotd
+import traceback
+from datetime import datetime
 # GLOBAL VARIABLES
 # DEFINE LISTENING HOST AND PORT
 BBS = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 host = '' # leave empty for any IP
 port = 6464 # you can change the incoming port to any desired
 UsersCount = 0
+
 
 # Conect to mysql (to make it work: pip install mysql-connector)
 # mydb = mysql.connector.connect(
@@ -28,6 +31,7 @@ try:
     BBS.setsockopt(socket.IPPROTO_TCP,socket.TCP_NODELAY,True)
 except socket.error as e:
     print("Connection error detected ->", str(e))
+    exit(1)
 
 print('SERVER > Waiting for a Connection..\r')
 
@@ -35,37 +39,43 @@ BBS.listen()
 
 def do_welcome(connection):
 
-         #CLEAR SCREEN
-         send_control_code(connection, "clear") #sends a coded cursor
-         send_control_code(connection, "home") #sends a coded cursor
+  wotd_header = f"Today is {datetime.now().strftime('%Y-%m-%d')} and here is your word of the day!\n"
 
-         #SEND HEADER FILE (.SEQ)
-         # print ("STATUS > will send seq")
-         send_line(connection, "\n\n") #sends text
-         send_seq(connection, "seq/welcome.seq") #sends a seq file to screen
+  send_line(connection, wotd_header)
 
-         #THIS SECTION SENDS RANDOM THINGS (FOR YOU TO LEARN HOW)
-         send_control_code(connection, "red") #cbmcursor sends color red code
-         send_line(connection, "\n\nWelcome") # sends message
-         send_control_code(connection, "blue") #cbmcursor sends color blue code
-         send_line(connection, " to ") # sends message
-         send_control_code(connection, "purple") #cbmcursor sends color purple code
-         send_line(connection, "CBMBBS\n\n") # sends message
-         send_control_code(connection, "gray") #cbmcursor sends color gray code
-         welcome2="This is a text is a text" #You can also declare a string
-         send_line(connection, welcome2) #and send it after cbmencode it
-         cursorxy(connection,1,1) #cursorxy positions cursor on x,y on screen
-         send_line(connection, "up1")
-         cursorxy(connection,1,25)
-         send_line(connection, "down25")
-         cursorxy(connection,10,20)
-         get_char(connection)
+  send_line(connection, "#OK#")
+  wotd_result = wotd.get_word_of_the_day()
+  wotd_string = f"#{wotd_result['title'].upper()}#{wotd_result['description'].upper()}#\n"
+  send_line(connection, wotd_string)
 
-         send_control_code(connection, "clear") #sends a coded cursor
-         send_control_code(connection, "home") #sends a coded cursor
-         send_seq(connection, "seq/colaburger.seq")
-         cursorxy(connection,30,5)
-         get_char(connection)
+  get_char(connection)
+  #CLEAR SCREEN
+  send_control_code(connection, "clear") #sends a coded cursor
+  send_control_code(connection, "home") #sends a coded cursor
+  send_seq(connection, "seq/welcome.seq") #sends a seq file to screen
+
+  #THIS SECTION SENDS RANDOM THINGS (FOR YOU TO LEARN HOW)
+  send_control_code(connection, "red") #cbmcursor sends color red code
+  send_line(connection, "\n\nWelcome") # sends message
+  send_control_code(connection, "blue") #cbmcursor sends color blue code
+  send_line(connection, " to ") # sends message
+  send_control_code(connection, "purple") #cbmcursor sends color purple code
+  send_line(connection, "CBMBBS\n\n") # sends message
+  send_control_code(connection, "gray") #cbmcursor sends color gray code
+  welcome2="This is a text is a text" #You can also declare a string
+  send_line(connection, welcome2) #and send it after cbmencode it
+  cursorxy(connection,1,1) #cursorxy positions cursor on x,y on screen
+  send_line(connection, "up1")
+  cursorxy(connection,1,25)
+  send_line(connection, "down25")
+  cursorxy(connection,10,20)
+  get_char(connection)
+
+  send_control_code(connection, "clear") #sends a coded cursor
+  send_control_code(connection, "home") #sends a coded cursor
+  send_seq(connection, "seq/colaburger.seq")
+  cursorxy(connection,30,5)
+  get_char(connection)
 
 def do_login(connection):
 
@@ -229,12 +239,6 @@ def user_session(connection):
 
       while True:
 
-         #initializes terminal
-         send_control_code(connection,"clear")
-         send_control_code(connection,"home")
-         send_line(connection, "Connected. Hit any key...")
-         get_char(connection)
-
          do_welcome(connection)
 
          #userx,idx = do_login(connection)
@@ -255,6 +259,7 @@ def threaded_client(connection):
        UsersCount -= 1
     except Exception:
        connection.close()
+       print("Exception in threaded_client", traceback.format_exc())
        print('timeout   closed connection',connection)
        UsersCount -= 1
 
