@@ -18,7 +18,7 @@
 140 rem CONTROL REGISTER
 150 rem 31 = 8 data bits, 1 stop bit, internal clock,
 160 rem 19,200 baud setting doubled by SwiftLink crystal = 38,400
-170 poke ct,18:rem poke ct,31 for full speed on c64u
+170 poke ct,16:rem poke ct,31 for full speed on c64u
 
 180 rem COMMAND REGISTER
 190 rem no parity, no echo, DTR on, receive enabled
@@ -33,7 +33,7 @@
 260 gosub 700
 
 270 rem DIAL TCP SERVER (IP:PORT)
-280 ts$="atdt bbs.retrogamecoders.com:6464"+chr$(13)+chr$(13)+chr$(13)
+280 ts$="atdt localhost:6464"+chr$(13)+chr$(13)+chr$(13)
 290 gosub 700
 
 300 t$=""
