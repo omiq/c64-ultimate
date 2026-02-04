@@ -1,6 +1,9 @@
 import socket
 import time
 from funct import *
+from wotd import get_word_of_the_day
+CRLF = "\r\n"
+
 
 LISTEN_HOST = ""   # empty string means all network interfaces
 LISTEN_PORT = 6464
@@ -27,10 +30,13 @@ while True:
     # send the welcome screen file
     # send_ansi_file(connection, "welcome.ans")
     connection.send(cbmcursor("clear"))
-    send_seq(connection, "seq/welcome.seq") #sends a seq file to screen
-    cursorxy(connection,5,10)
-    connection.send(cbmcursor("white"))
-    connection.send(b"options:\n")
+    # send_seq(connection, "seq/welcome.seq") #sends a seq file to screen
+    # cursorxy(connection,5,10)
+    # connection.send(cbmcursor("white"))
+    # connection.send(b"options:\n")
+    wotd_result = get_word_of_the_day()
+    wotd = f"##OK#{wotd_result['title'].upper()}#{wotd_result['description'].upper()[0:250]}#" + CRLF
+    connection.send(wotd.encode("utf-8"))
     time.sleep(.5)
     # wait for a message, echo it back, then close the connection
     input_buffer = connection.recv(1024)
