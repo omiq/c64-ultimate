@@ -14,7 +14,7 @@
 140 rem control register
 150 rem 31 = 8 data bits, 1 stop bit, internal clock,
 160 rem baud setting doubled by swiftlink crystal = 38,400
-170 poke ct,18:rem poke ct,31 on c64u
+170 poke ct,31:rem poke ct,31 on c64u and 16 on vice
 180 rem command register
 190 rem no parity, no echo, dtr on, receive enabled
 200 poke cm,9
