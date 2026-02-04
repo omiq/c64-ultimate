@@ -219,6 +219,6 @@ def send_line(connection, line):
     linet=cbmencode(line)
     connection.send(linet)
 
-def send_control_code(connection, charx):
-    chrxx=cbmcursor(charx)
-    connection.send(chrxx)
+def send_control_code(connection, this_char):
+    encoded_char=cbmcursor(this_char)
+    connection.send(encoded_char)

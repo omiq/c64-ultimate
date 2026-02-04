@@ -1,5 +1,7 @@
 import socket
 import time
+from funct import *
+
 LISTEN_HOST = ""   # empty string means all network interfaces
 LISTEN_PORT = 6464
 
@@ -22,9 +24,14 @@ def send_ansi_file(connection, filename):
 while True:
     connection, address = server_socket.accept()
 
-    # send the welcome ansi screen file
-    send_ansi_file(connection, "welcome.ans")
-
+    # send the welcome screen file
+    # send_ansi_file(connection, "welcome.ans")
+    connection.send(cbmcursor("clear"))
+    send_seq(connection, "seq/welcome.seq") #sends a seq file to screen
+    cursorxy(connection,5,10)
+    connection.send(cbmcursor("white"))
+    connection.send(b"options:\n")
+    time.sleep(.5)
     # wait for a message, echo it back, then close the connection
     input_buffer = connection.recv(1024)
     print(input_buffer.decode("utf-8", errors="replace"))
