@@ -23,7 +23,7 @@
 220 for i=1 to 500:next
 230 rem send "at"to wake up tcp modem emulation
 240 rem leading cr ensures clean command state
-250 ts$=chr$(13)+"at"+chr$(13)
+250 ts$=chr$(13)+"+++"+chr$(13)
 260 gosub 700
 270 rem dial tcp server (ip:port)
 280 ts$="atdt php.retrogamecoders.com:80"+chr$(13)
@@ -62,6 +62,6 @@
 1000 rem ------------------------------------------------------------
 1010 rem process html tag in tg$
 1020 rem ------------------------------------------------------------
-1030 if tg$="<h1>" then print "page title: ";
-1040 tg$=""
-1050 return
+1030 if tg$="h1" then print "{rvs on}";
+1040 if tg$="/h1" then print "{rvs off}";
+2000 tg$="": return
