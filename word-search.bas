@@ -43,9 +43,8 @@
 470 if c=asc(">") then tt=0: goto 440
 475 if tt=1 then tg$=tg$+chr$(c)
 480 if tt=0 and tg$<>"" then gosub 1000
-585 if tt=0 and tg$="" and ht=1 then print chr$(c);
-590 if ht=0 then print "{home}";chr$(c);
-595 goto 440
+585 if tt=0 and tg$="" then print chr$(c);
+590 goto 440
 600 end
 700 rem ------------------------------------------------------------
 710 rem send string ts$ character by character
@@ -67,7 +66,7 @@
 1000 rem ------------------------------------------------------------
 1010 rem process html tag in tg$
 1020 rem ------------------------------------------------------------
-1030 if tg$="html" then print chr$(147);ht=1
+1030 if tg$="html" or tg$="html" then print "{clr}";
 1040 if tg$="h1" then print "{rvs on}";
 1050 if tg$="/h1" then print "{rvs off}";
 2000 tg$="": return
