@@ -94,7 +94,7 @@ while True:
 
             clients.append(client_socket)
             receive_buffers[client_socket] = bytearray()
-
+            
             print("Incoming connection from", client_addr)
 
             send_text(client_socket, "#OK#")
@@ -102,6 +102,10 @@ while True:
             send_text(client_socket, f"#{wotd_result['title'].upper()}#{wotd_result['description'].upper()}#" + CRLF)
             #send_text(client_socket, "WELCOME TO THE WEATHER SERVER" + CRLF)
             #send_text(client_socket, weather_and_date() + CRLF)
+            # print any data received
+            data = client_socket.recv(RECV_BYTES)
+            print(data)
+
 
         disconnect_client(client_socket)
         continue
