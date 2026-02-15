@@ -31,6 +31,10 @@
 300 crlf$=chr$(13)+chr$(10)
 310 ts$="get / http/1.1"+crlf$+"host: php.retrogamecoders.com"+crlf$+"connection: close"+crlf$+crlf$
 320 gosub 700
+390 ht=0: rem flag for if html started (1 = started, 0 = not started)
+400 rem ------------------------------------------------------------
+410 rem main loop to read and process incoming data
+420 rem ------------------------------------------------------------
 440 s=peek(sr)
 450 if (s and 8)=0 then goto 440
 455 c=peek(dr)
@@ -39,8 +43,9 @@
 470 if c=asc(">") then tt=0: goto 440
 475 if tt=1 then tg$=tg$+chr$(c)
 480 if tt=0 and tg$<>"" then gosub 1000
-585 if tt=0 and tg$="" then print chr$(c);
-590 goto 440
+585 if tt=0 and tg$="" and ht=1 then print chr$(c);
+590 if ht=0 then print "{home}";chr$(c);
+595 goto 440
 600 end
 700 rem ------------------------------------------------------------
 710 rem send string ts$ character by character
@@ -62,6 +67,7 @@
 1000 rem ------------------------------------------------------------
 1010 rem process html tag in tg$
 1020 rem ------------------------------------------------------------
-1030 if tg$="h1" then print "{rvs on}";
-1040 if tg$="/h1" then print "{rvs off}";
+1030 if tg$="html" then print chr$(147);ht=1
+1040 if tg$="h1" then print "{rvs on}";
+1050 if tg$="/h1" then print "{rvs off}";
 2000 tg$="": return
