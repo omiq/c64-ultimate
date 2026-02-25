@@ -105,20 +105,25 @@ for ($r = 0; $r < $rows; $r++) {
     }
 }
 
-// Output: bare-bones HTML with a single <pre>
-header('Content-Type: text/html; charset=UTF-8');
+?>
 
-echo "<!DOCTYPE html>\n";
-echo "<html><body><pre>\n";
+<html>
+  <body>
+  <h1>WORD SEARCH</h1>
 
-// Print grid
+<?php
+
+// Print grid line by line, CRLF-terminated
 for ($r = 0; $r < $rows; $r++) {
-    echo implode('', $grid[$r]) . "\n";
+    $line = implode('', $grid[$r]);
+    echo $line . "\r\n";
+    @ob_flush();
+    flush();
 }
 
 echo "\nWORDS:\n";
 foreach ($selectedWords as $w) {
-    echo $w . "\n";
+    echo $w . "\r\n";
 }
 
-echo "</pre></body></html>\n";
+echo "</body></html>\r\n";
