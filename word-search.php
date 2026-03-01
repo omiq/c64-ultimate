@@ -109,21 +109,21 @@ for ($r = 0; $r < $rows; $r++) {
 
 <html>
   <body>
-  <h1>WORD SEARCH</h1>
-
+  <h1>COMPUTE! WORD SEARCH</h1>
+<br>
 <?php
 
 // Print grid line by line, CRLF-terminated
 for ($r = 0; $r < $rows; $r++) {
     $line = implode('', $grid[$r]);
-    echo $line . "\r\n";
+    echo " " . $line . "\r\n";
     @ob_flush();
     flush();
 }
 
-echo "\nWORDS:\n";
+echo "\r\n<h2>WORDS:</h2>\r\n";
 foreach ($selectedWords as $w) {
-    echo $w . "\r\n";
+    echo "* " .$w . "\r\n";
 }
 
 echo "</body></html>\r\n";
