@@ -122,8 +122,7 @@ for ($r = 0; $r < $rows; $r++) {
     flush();
 }
 echo "\r\n</pre>";
-echo "\r\n<h2>WORDS:</h2>\r\n";
-echo "<ol>\r\n";
+echo "\r\n<h2>WORDS:</h2><ol>\r\n";
 
 foreach ($selectedWords as $w) {
     echo "<li>" .$w . "</li>\r\n";
