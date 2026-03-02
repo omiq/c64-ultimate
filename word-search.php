@@ -111,6 +111,7 @@ for ($r = 0; $r < $rows; $r++) {
   <body>
   <h1>COMPUTE! WORD SEARCH</h1>
 <br>
+<pre>
 <?php
 
 // Print grid line by line, CRLF-terminated
@@ -120,10 +121,12 @@ for ($r = 0; $r < $rows; $r++) {
     @ob_flush();
     flush();
 }
-
+echo "\r\n</pre>";
 echo "\r\n<h2>WORDS:</h2>\r\n";
-foreach ($selectedWords as $w) {
-    echo "* " .$w . "\r\n";
-}
+echo "<ol>\r\n";
 
+foreach ($selectedWords as $w) {
+    echo "<li>" .$w . "</li>\r\n";
+}
+echo "</ol>\r\n";
 echo "</body></html>\r\n";

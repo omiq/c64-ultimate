@@ -26,10 +26,10 @@
 250 ts$=chr$(13)+"at"+chr$(13)
 260 gosub 700
 270 rem dial tcp server (ip:port)
-280 ts$="atdt example.com:80"+chr$(13)
+280 ts$="atdt php.retrogamecoders.com:80"+chr$(13)
 290 gosub 700
 300 crlf$=chr$(13)+chr$(10)
-310 ts$="get / http/1.1"+crlf$+"host: example.com"+crlf$+"connection: close"+crlf$+crlf$
+310 ts$="get / http/1.1"+crlf$+"host: php.retrogamecoders.com"+crlf$+"connection: close"+crlf$+crlf$
 320 gosub 700
 440 s=peek(sr)
 450 if (s and 8)=0 then goto 440
