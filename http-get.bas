@@ -1,59 +1,93 @@
-10 rem ------------------------------------------------------------
-20 rem swiftlink tcp terminal (c64 basic v2)
-30 rem uses direct peek/poke to the swiftlink 6551 acia
-40 rem acia register addresses (swiftlink at $de00)
-45 rem ------------------------------------------------------------
-50 tt=0 :rem flag for tracking html tags (1 = inside tag, 0 = outside)
-60 dr=56832 :rem data register (read = receive, write = transmit)
-70 sr=56833 :rem status register (flags: rx ready, tx ready, errors)
-80 cm=56834 :rem command register (parity, echo, dtr, interrupts)
-90 ct=56835 :rem control register (baud rate, word size, stop bits)
-100 rem clear screen and set text colour
-110 print chr$(14);chr$(147);chr$(5);"connecting ...":s=0
-120 rem reset acia by writing to status register
-130 poke sr,0
-140 rem control register
-150 rem 31 = 8 data bits, 1 stop bit, internal clock,
-160 rem baud setting doubled by swiftlink crystal = 38,400
-170 poke ct,31:rem poke ct,31 on c64u and 16 on vice
-180 rem command register
-190 rem no parity, no echo, dtr on, receive enabled
-200 poke cm,9
-210 rem short delay to let hardware settle
-220 for i=1 to 500:next
-230 rem send "at"to wake up tcp modem emulation
-240 rem leading cr ensures clean command state
-250 ts$=chr$(13)+"at"+chr$(13)
-260 gosub 700
-270 rem dial tcp server (ip:port)
-280 ts$="atdt php.retrogamecoders.com:80"+chr$(13)
-290 gosub 700
-300 crlf$=chr$(13)+chr$(10)
-310 ts$="get / http/1.1"+crlf$+"host: php.retrogamecoders.com"+crlf$+"connection: close"+crlf$+crlf$
-320 gosub 700
-440 s=peek(sr)
-450 if (s and 8)=0 then goto 440
-455 c=peek(dr)
-460 if c>=97 and c<=122 then c=c-32
-465 if c=asc("<") then tt=1: goto 440
-470 if c=asc(">") then tt=0: goto 440
-585 if tt=0 then print chr$(c);
-590 goto 440
-600 end
-700 rem ------------------------------------------------------------
-710 rem send string ts$ character by character
-720 rem ------------------------------------------------------------
-730 for i=1 to len(ts$)
-740 b=asc(mid$(ts$,i,1))
-750 gosub 800
-760 next
-770 return
-800 rem ------------------------------------------------------------
-810 rem send one byte in b
-820 rem wait until transmit register is empty
-830 rem bit 4 (value 16) = transmit ready
-840 rem ------------------------------------------------------------
-850 s=peek(sr)
-860 if (s and 16)=0 then 850
-870 poke dr,b
-880 return
+10 REM ------------------------------------------------------------
+20 REM LOAD A WEB PAGE USING SWIFTLINK 
+30 REM ------------------------------------------------------------
+50 TG$="":TT=0 :REM FLAG FOR TRACKING HTML TAGS (1 = INSIDE TAG, 0 = OUTSIDE)
+60 DR=56832 :REM DATA REGISTER (READ = RECEIVE, WRITE = TRANSMIT)
+70 SR=56833 :REM STATUS REGISTER (FLAGS: RX READY, TX READY, ERRORS)
+80 CM=56834 :REM COMMAND REGISTER (PARITY, ECHO, DTR, INTERRUPTS)
+90 CT=56835 :REM CONTROL REGISTER (BAUD RATE, WORD SIZE, STOP BITS)
+100 REM CLEAR SCREEN 
+110 PRINT CHR$(147);CHR$(5);"CONNECTING ...":S=0
+120 REM RESET ACIA BY WRITING TO STATUS REGISTER
+130 POKE SR,0
+140 REM CONTROL REGISTER
+150 REM 31 = 8 DATA BITS, 1 STOP BIT, INTERNAL CLOCK,
+160 REM BAUD SETTING DOUBLED BY SWIFTLINK CRYSTAL = 38,400
+170 POKE CT,31:REM POKE CT,31 ON C64U AND 16 ON VICE
+180 REM COMMAND REGISTER
+190 REM NO PARITY, NO ECHO, DTR ON, RECEIVE ENABLED
+200 POKE CM,9
+210 REM SHORT DELAY TO LET HARDWARE SETTLE
+220 FOR I=1 TO 500:NEXT
+230 GOSUB 3000
+270 REM DIAL TCP SERVER (IP:PORT)
+280 TS$="ATDT PHP.RETROGAMECODERS.COM:80"+CHR$(13)
+290 GOSUB 700
+300 CRLF$=CHR$(13)+CHR$(10)
+310 TS$="GET / HTTP/1.1"+CRLF$+"HOST: PHP.RETROGAMECODERS.COM"+CRLF$+CRLF$
+320 GOSUB 700
+325 HT=0: REM FLAG FOR IF HTML STARTED (1 = STARTED, 0 = NOT STARTED)
+330 S=PEEK(SR)
+335 IF (S AND 8)=0 THEN GOTO 330
+340 C=PEEK(DR)
+345 IF C<>10 AND C<>13 THEN CR=0: GOTO 330
+350 CR=CR+1
+355 IF CR<4 THEN GOTO 330
+360 HT=1
+400 REM ------------------------------------------------------------
+410 REM MAIN LOOP TO READ AND PROCESS INCOMING DATA
+420 REM ------------------------------------------------------------
+440 S=PEEK(SR)
+450 IF (S AND 8)=0 THEN GOTO 440
+455 C=PEEK(DR)
+460 IF C>=97 AND C<=122 THEN C=C-32
+465 IF C=ASC("<") THEN TT=1: TG$="": GOTO 440
+470 IF C=ASC(">") THEN TT=0: GOTO 440
+475 IF TT=1 THEN TG$=TG$+CHR$(C)
+480 IF TT=0 AND TG$<>"" THEN GOSUB 1000
+585 IF TT=0 AND TG$="" THEN GOSUB 3200
+590 GOTO 440
+600 END
+700 REM ------------------------------------------------------------
+710 REM SEND STRING TS$ CHARACTER BY CHARACTER
+720 REM ------------------------------------------------------------
+730 FOR I=1 TO LEN(TS$)
+740 B=ASC(MID$(TS$,I,1))
+750 GOSUB 800
+760 NEXT
+770 RETURN
+800 REM ------------------------------------------------------------
+810 REM SEND ONE BYTE IN B
+820 REM WAIT UNTIL TRANSMIT REGISTER IS EMPTY
+830 REM BIT 4 (VALUE 16) = TRANSMIT READY
+840 REM ------------------------------------------------------------
+850 S=PEEK(SR)
+860 IF (S AND 16)=0 THEN 850
+870 POKE DR,B
+880 RETURN
+1000 REM ------------------------------------------------------------
+1010 REM PROCESS HTML TAG IN TG$
+1020 REM ------------------------------------------------------------
+1025 REM PRINT "*";TG$;"*"
+1040 IF TG$="H1" THEN PRINT CHR$(147);CHR$(18);CHR$(159);:TG$="": RETURN
+1050 IF TG$="/H1" THEN PRINT CHR$(156);CHR$(5);CHR$(13);:TG$="": RETURN
+1055 IF TG$="H2" THEN PRINT CHR$(158);:TG$="": RETURN
+1060 IF TG$="/H2" THEN PRINT CHR$(13);CHR$(5);:TG$="": RETURN
+1065 IF TG$="BR" THEN PRINT CHR$(13);:TG$="": RETURN
+1070 IF TG$="LI" THEN PRINT CHR$(5);CHR$(119);" ";:TG$="": ST$="": RETURN
+1075 IF TG$="/LI" THEN TG$="": WD$(WD)=ST$: ST$="": WD=WD+1: RETURN
+1095 IF TG$="/HTML" THEN GOSUB 3000: GOSUB 700: RETURN
+2000 TG$="": RETURN
+3000 REM HANGUP 
+3010 FOR I=1 TO 3
+3015 B=ASC("+")
+3020 GOSUB 850
+3025 FOR W=1 TO 500:NEXT W
+3050 NEXT I
+3055 RETURN
+3200 REM BUILD STRINGS TO STORE
+3210 IF LEN(ST$)<40 AND C<>13 THEN ST$=ST$+CHR$(C)
+3220 IF LEFT$(ST$,15)="400 BAD REQUEST" THEN PRINT CHR$(5);" TRYING AGAIN!":GOTO 10: REM TRY LOADING AGAIN
+3240 PRINT CHR$(C);
+3250 RETURN 
+
