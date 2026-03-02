@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # BASIC source file to tokenize and run (defaults to word-search.bas if not given)
-BAS_FILE="${1:-/home/chrisg/github/c64-ultimate/word-search.bas}"
+BAS_FILE="${1:-word-search.bas}"
 
 if [ ! -f "$BAS_FILE" ]; then
   echo "BASIC file not found: $BAS_FILE" >&2
