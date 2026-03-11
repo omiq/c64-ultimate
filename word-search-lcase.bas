@@ -1,8 +1,7 @@
 10 rem ------------------------------------------------------------
 20 rem compute! word search for c64
 30 rem ------------------------------------------------------------
-40 dim wd$(7): wd=1: print chr$(142)
-45 crlf$=chr$(13)+chr$(10)
+40 dim wd$(7): wd=1
 50 tg$="":tt=0 :rem flag for tracking html tags (1 = inside tag, 0 = outside)
 60 dr=56832 :rem data register (read = receive, write = transmit)
 70 sr=56833 :rem status register (flags: rx ready, tx ready, errors)
@@ -10,9 +9,6 @@
 90 ct=56835 :rem control register (baud rate, word size, stop bits)
 100 rem clear screen and set text colour (remove chr$(31) to unhide headers)
 110 print chr$(142);chr$(147);chr$(5);"connecting ...";chr$(31):s=0
-115 for i=1 to 500
-116 rem delay
-117 next
 120 rem reset acia by writing to status register
 130 poke sr,0
 140 rem control register
@@ -25,21 +21,18 @@
 210 rem short delay to let hardware settle
 220 for i=1 to 500:next
 230 gosub 3000
-240 rem reset the modem
-245 ts$="atz"+chr$(13)+"ath0"+chr$(13):gosub 700
-250 for i=1 to 500
-252 rem delay
-253 next
-255 rem start the load 
-260 st$="":c=32:ts$="":ht=0:tg$="":cr=0
 270 rem dial tcp server (ip:port)
 280 ts$="atdt php.retrogamecoders.com:80"+chr$(13)
 290 gosub 700
-305 ul$="/1/"
-306 hn$="host: php.retrogamecoders.com"
-310 ts$="get "+ul$+" http/1.1"+crlf$+hn$+crlf$+crlf$
-315 gosub 700
-320 ts$="connection: close"+crlf$:gosub 700
+291 rs$=""
+292 s=peek(sr): if (s and 8)=0 then goto 292
+293 c=peek(dr): rs$=rs$+chr$(c)
+294 if right$(rs$,7)<>"connect" then goto 292
+295 crlf$=chr$(13)+chr$(10)
+310 ts$="get /word-search.php http/1.1"+crlf$
+312 ts$=ts$+"host: php.retrogamecoders.com"+crlf$
+314 ts$=ts$+crlf$
+322 gosub 700
 325 ht=0: rem flag for if html started (1 = started, 0 = not started)
 330 s=peek(sr)
 335 if (s and 8)=0 then goto 330
@@ -47,23 +40,10 @@
 345 if c<>10 and c<>13 then cr=0: goto 330
 350 cr=cr+1
 355 if cr<4 then goto 330
-365 s=peek(sr)
-367 if (s and 8)=0 then goto 365
-368 c=peek(dr)
-369 if c>=97 and c<=122 then c=c-32
-370 print chr$(c);
-371 if len(st$)<40 and c<>13 and c<>10 then st$=st$+chr$(c)
-372 cf$="http/1.1 200 ok"
-373 br$="http/1.1 400 bad request"
-374 na$="http/1.1 405 not allowed"
-375 if left$(st$,15) = cf$ then print chr$(5);"200 ok!";chr$(31);
-376 if left$(st$,24) = na$ then print chr$(5);"bad":goto 255: rem fail
-377 if left$(st$,24) = br$ then print chr$(5);"bad":goto 255: rem fail
-378 if right$(st$,6)="<html>" then ht=1
-436 if c=13 then st$=""
-437 if ht<>1 then goto 365
-438 st$="":c=32
-439 rem main loop to read and process incoming data
+360 ht=1
+400 rem ------------------------------------------------------------
+410 rem main loop to read and process incoming data
+420 rem ------------------------------------------------------------
 440 s=peek(sr)
 450 if (s and 8)=0 then goto 440
 455 c=peek(dr)
@@ -105,7 +85,7 @@
 1075 if tg$="/li" then tg$="": wd$(wd)=st$: st$="": wd=wd+1: return
 1095 if tg$="/html" then gosub 3000: gosub 700: goto 4000:return
 2000 tg$="": return
-3000 rem hangup 
+3000 rem hangup
 3010 for i=1 to 3
 3015 b=asc("+")
 3020 gosub 850
@@ -113,11 +93,11 @@
 3050 next i
 3055 return
 3200 rem build strings to store
-3210 if len(st$)<40 and c<>13 and c<>10 then st$=st$+chr$(c)
-3220 if left$(st$,15)="400 bad request" then print chr$(5);" retry!":goto 255
-3225 if left$(st$,15)="405 not allowed" then print chr$(5);" retry!":goto 255
+3210 if len(st$)<40 and c<>13 then st$=st$+chr$(c)
+3220 if left$(st$,15)="400 bad request" then print chr$(5);
+3225 if left$(st$,15)="400 bad request" then print " trying again!":goto 10
 3240 print chr$(c);
-3250 return 
+3250 return
 4000 rem interactive portion
 4001 cy = 2: cx = 14: rem avoid word grid at 1,2 to 10,11
 4002 fw$="": rem found word
@@ -150,7 +130,7 @@
 6010 l$=chr$(peek(1024+(y*40)+x)+64)
 6020 gosub 7000
 6030 if cx=14 then print l$;"                  "
-6040 if cx>14 then print l$;  
+6040 if cx>14 then print l$;
 6050 cx=cx+1: fw$=fw$+l$
 6060 return
 7000 rem place the cursor at cx,cy
@@ -158,7 +138,7 @@
 7020 return
 10100 rem noises -------------------------------
 10110 poke 54296,15      :rem volume max
-10140 return 
+10140 return
 10200 rem --- wrong answer ---
 10201 poke 54277,125     :rem attack/decay
 10205 poke 54278,50      :rem sustain/release
