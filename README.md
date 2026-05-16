@@ -29,14 +29,14 @@ What’s here
   - `swiftlink.bas`: C64 BASIC code that talks to the Python server over a SwiftLink-style interface / TCP bridge.  
   - `wotd.bas`: C64-side program for showing the Word of the Day coming from the Python side.  
   - `http-get.bas`, `word-search.bas`: HTTP clients using **direct PEEK/POKE** to the 6551 ACIA at `$DE00` (fast on real SwiftLink / VICE; can hang on some C64 Ultimate firmware).  
-  - `http-get-kernal.bas`: same as `http-get.bas` but via **SwiftDriver** + KERNAL (pair with `swiftdrvr49152.prg`; also in `c64u-kernal/`).  
+  - `http-get-kernal.bas`: same as `http-get.bas` but via **SwiftDriver** + KERNAL (pair with `swiftdrvr.prg`; also in `c64u-kernal/`).  
   - `modem.bas`, etc. are experiments around dialing/connecting and displaying remote content.
 
 - **`swiftdriver/` — Bo Zimmerman’s SwiftDriver (full upstream tree)**  
   Vendored copy of [Swiftdriver.zip](https://www.zimmers.net/anonftp/pub/cbm/c64/comm/Swiftdriver.zip): **`swiftdrvr.asm`**, LADS project, built `swiftdrvr49152.prg`, **Apache License 2.0**. Kept in-repo for study, modification, and so the source does not depend on a single download mirror. See [`swiftdriver/PROVENANCE.md`](swiftdriver/PROVENANCE.md) and [`swiftdriver/README`](swiftdriver/README).
 
 - **`c64u-kernal/` — alternate programs for C64 Ultimate users**  
-  If direct ACIA code freezes on `(S AND 8)=0` after a firmware update, use these instead. They load **SwiftDriver** from `swiftdrvr49152.prg` (same binary as in `swiftdriver/`) and talk through KERNAL `OPEN` / `PRINT#` / `GET#` at **600 baud**. See [`c64u-kernal/README.md`](c64u-kernal/README.md) for menu settings and which version to try.
+  If direct ACIA code freezes on `(S AND 8)=0` after a firmware update, use these instead. They `LOAD "swiftdrvr"` (8-char disk name; same binary as `swiftdriver/swiftdrvr49152.prg`) and talk through KERNAL `OPEN` / `PRINT#` / `GET#` at **600 baud**. See [`c64u-kernal/README.md`](c64u-kernal/README.md) and [`DISK_CREATION.md`](DISK_CREATION.md).
 
 - **C64 Ultimate PRG runner (`runner.py`, `rbas.sh`, `word-search.bas`)**  
   - `runner.py`: small helper that HTTP‑posts a `.prg` to a C64 Ultimate (or compatible) using its `/v1/runners:run_prg` endpoint.  
@@ -80,7 +80,7 @@ Recent C64 Ultimate firmware can leave **direct `$DE00` polling** (`PEEK(SR)` / 
 **Try this first:**
 
 1. Ultimate menu → **ACIA mapping `DE00/NMI`**, **Hardware mode SwiftLink** (see [`c64u-kernal/README.md`](c64u-kernal/README.md)).
-2. Use the programs in **`c64u-kernal/`** with **`swiftdrvr49152.prg`** on the same disk (copy from **`swiftdriver/`** or the copy already in `c64u-kernal/`) — `LOAD` driver, `SYS 49152`, then `RUN` the program.
+2. Use the programs in **`c64u-kernal/`** with **`swiftdrvr.prg`** on the same disk — `LOAD "SWIFTDRVR",8,1`, `SYS 49152`, then `RUN` the program.
 3. Tokenize and run via Ultimate HTTP runner, e.g. `./rbas.sh c64u-kernal/word-search.bas`.
 
 **Still on direct ACIA?** Root-level `http-get.bas` / `word-search.bas` / `wotd.bas` remain the choice for hardware SwiftLink, VICE, or setups where `POKE CT,31` (38400) works.

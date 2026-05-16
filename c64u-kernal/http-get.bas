@@ -5,22 +5,23 @@
 40 rem ------------------------------------------------------------
 50 tg$="":tt=0
 60 cn=5:rem file number for rs232
-70 ld=0:rem driver load flag
-80 if ld=0 then ld=1:load "swiftdrvr",8,1
+80 if ld then 90
+85 load "swiftdrvr",8,1
+87 ld=1
 90 sys 49152
 100 print chr$(147);chr$(5);"connecting ...":s=0
-110 open cn,2,0,chr$(7):rem 600 baud via kernal
-120 crlf$=chr$(13)+chr$(10)
-130 gosub 3000:rem hangup first for clean state
-140 ts$="atdt php.retrogamecoders.com:80"+chr$(13)
-150 gosub 700
-160 rs$="":to=0
-170 to=to+1:if to>30000 then print "connect timeout":close cn:end
-180 get#cn,a$:if a$="" then goto 170
-190 rs$=rs$+a$
-200 if right$(rs$,7)<>"CONNECT" and right$(rs$,7)<>"connect" then goto 170
-210 ts$="get / http/1.1"+crlf$+"host: php.retrogamecoders.com"+crlf$+crlf$
-220 gosub 700
+105 gosub 850:rem open rs232 at 600 baud
+110 crlf$=chr$(13)+chr$(10)
+115 gosub 3000:rem hangup first for clean state
+120 ts$="atdt php.retrogamecoders.com:80"+chr$(13)
+130 gosub 700
+140 rs$="":to=0
+150 to=to+1:if to>30000 then print "connect timeout":close cn:end
+160 get#cn,a$:if a$="" then goto 150
+170 rs$=rs$+a$
+180 if right$(rs$,7)<>"CONNECT" and right$(rs$,7)<>"connect" then goto 150
+190 ts$="get / http/1.1"+crlf$+"host: php.retrogamecoders.com"+crlf$+crlf$
+200 gosub 700
 230 ht=0:cr=0
 240 get#cn,a$:if a$="" then goto 240
 250 c=asc(a$)
@@ -62,6 +63,10 @@
 3030 ts$="ath"+chr$(13):gosub 700
 3040 return
 3200 if len(st$)<40 and c<>13 then st$=st$+chr$(c)
-3220 if left$(st$,15)="400 BAD REQUEST" then close cn:print chr$(5);" trying again!":goto 100
+3220 if left$(st$,15)="400 BAD REQUEST" then close cn:print chr$(5);" trying again!":gosub 850:gosub 3000:goto 120
 3240 print chr$(c);
 3250 return
+850 rem re-init wedge and open rs232 (after close or retry)
+855 sys 49152
+860 open cn,2,0,chr$(7):rem 600 baud = chr$(7)
+865 return

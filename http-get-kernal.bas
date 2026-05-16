@@ -1,19 +1,21 @@
 10 rem ------------------------------------------------------------
 20 rem load a web page (kernal + swiftdriver — c64 ultimate safe)
 30 rem same as http-get.bas but uses open/get#/print# not $de00 peek
-31 rem needs swiftdrvr49152.prg (see swiftdriver/ or c64u-kernal/)
+31 rem needs swiftdrvr.prg on disk (see c64u-kernal/ or swiftdriver/)
 40 rem ------------------------------------------------------------
 50 tg$="":tt=0
 60 cn=5:rem file number for rs232
-70 ld=0:rem driver load flag
-80 if ld=0 then ld=1:load "swiftdrvr49152",8,1
+70 rem load driver once (never set ld=0 here — that causes reload loop)
+80 if ld then 90
+85 load "swiftdrvr",8,1
+87 ld=1
 90 sys 49152
 100 print chr$(147);chr$(5);"connecting ...":s=0
-110 open cn,2,0,chr$(7):rem 600 baud via kernal
-120 crlf$=chr$(13)+chr$(10)
-130 gosub 3000:rem hangup first for clean state
-140 ts$="atdt php.retrogamecoders.com:80"+chr$(13)
-150 gosub 700
+105 gosub 850:rem open rs232 at 600 baud
+110 crlf$=chr$(13)+chr$(10)
+115 gosub 3000:rem hangup first for clean state
+120 ts$="atdt php.retrogamecoders.com:80"+chr$(13)
+130 gosub 700
 160 rs$="":to=0
 170 to=to+1:if to>30000 then print "connect timeout":close cn:end
 180 get#cn,a$:if a$="" then goto 170
@@ -62,6 +64,10 @@
 3030 ts$="ath"+chr$(13):gosub 700
 3040 return
 3200 if len(st$)<40 and c<>13 then st$=st$+chr$(c)
-3220 if left$(st$,15)="400 BAD REQUEST" then close cn:print chr$(5);" trying again!":goto 100
+3220 if left$(st$,15)="400 BAD REQUEST" then close cn:print chr$(5);" trying again!":gosub 850:gosub 3000:goto 120
 3240 print chr$(c);
 3250 return
+850 rem re-init wedge and open rs232 (after close or retry)
+855 sys 49152
+860 open cn,2,0,chr$(7):rem 600 baud = chr$(7)
+865 return

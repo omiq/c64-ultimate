@@ -8,12 +8,12 @@ They use **Bo Zimmerman’s SwiftDriver** loaded at `$C000`, then normal **KERNA
 
 | File | Purpose |
 |------|---------|
-| `swiftdrvr49152.prg` | SwiftDriver binary (same file as [`../swiftdriver/swiftdrvr49152.prg`](../swiftdriver/swiftdrvr49152.prg)) |
+| `swiftdrvr.prg` | SwiftDriver binary on disk (8-char name; same bytes as [`../swiftdriver/swiftdrvr49152.prg`](../swiftdriver/swiftdrvr49152.prg)) |
 | `http-get.bas` | Fetch and display a web page over HTTP (same as root `http-get-kernal.bas`) |
 | `wotd.bas` | Word of the Day from the Python BBS (`bbs.py` on port 6464) |
 | `word-search.bas` | Compute! word-search demo (HTTP + on-screen game) |
 
-**Source code, assembly, and license** for the driver live in **[`../swiftdriver/`](../swiftdriver/)** (`swiftdrvr.asm`, `LICENSE`, `PROVENANCE.md`). Copy `swiftdrvr49152.prg` onto your C64 disk together with whichever `.bas` you run.
+**Source code, assembly, and license** for the driver live in **[`../swiftdriver/`](../swiftdriver/)** (`swiftdrvr.asm`, `LICENSE`, `PROVENANCE.md`). On a C64 disk the driver must be named **`SWIFTDRVR`** (copy `swiftdrvr.prg` from here, or rename the upstream `swiftdrvr49152.prg` — long names are awkward on real drives).
 
 ## C64 Ultimate menu settings
 
@@ -27,9 +27,9 @@ If the modem still misbehaves after errors, try a **full power cycle** (not just
 
 ## How to run on a real C64 / Ultimate
 
-1. Copy **`swiftdrvr49152.prg`** plus the program you want onto your C64 drive (disk image or SD/USB).
+1. Copy **`swiftdrvr.prg`** plus the program you want onto your C64 drive (disk image or SD/USB). See [`../DISK_CREATION.md`](../DISK_CREATION.md) to build `kernal.d64`.
 2. Load the driver **once per power-on** (each program below does this automatically if needed):
-   - `LOAD "SWIFTDRVR49152",8,1` — change `8` to your device number.
+   - `LOAD "SWIFTDRVR",8,1` — change `8` to your device number.
    - `SYS 49152`
 3. Run the program, e.g. `LOAD "WORD-SEARCH",8` then `RUN`.
 
@@ -97,5 +97,5 @@ From the repo root (with `petcat` and `.env` set up — see main [`README.md`](.
 | Situation | Try |
 |-----------|-----|
 | Real SwiftLink cartridge, VICE with direct ACIA, older C64U firmware | Root `*.bas` (direct `PEEK`/`POKE` at `$DE00`) |
-| C64 Ultimate, new firmware, hangs on connect | **`c64u-kernal/*.bas`** + `swiftdrvr49152.prg` |
+| C64 Ultimate, new firmware, hangs on connect | **`c64u-kernal/*.bas`** + `swiftdrvr.prg` |
 | Still stuck | Confirm menu settings, 600 baud, power cycle; report firmware version |

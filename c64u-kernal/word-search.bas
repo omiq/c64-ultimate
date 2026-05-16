@@ -1,15 +1,17 @@
 10 rem ------------------------------------------------------------
 20 rem compute! word search (c64 ultimate / kernal + swiftdriver)
 30 rem ------------------------------------------------------------
-40 dim wd$(7): wd=1
-50 tg$="":tt=0
-60 cn=5:ld=0
-70 if ld=0 then ld=1:load "swiftdrvr",8,1
+70 if ld=1 then goto 80
+75 load "swiftdrvr",8,1
+77 ld=1
 80 sys 49152
+81 dim wd$(7): wd=1
+82 tg$="":tt=0
+83 cn=5
 90 print chr$(142);chr$(147);chr$(5);"connecting ...";chr$(31):s=0
-100 open cn,2,0,chr$(7):rem 600 baud
-110 gosub 3000
-120 ts$="atdt php.retrogamecoders.com:80"+chr$(13)
+95 gosub 850
+100 gosub 3000
+110 ts$="atdt php.retrogamecoders.com:80"+chr$(13)
 130 gosub 700
 140 rs$="":to=0
 150 to=to+1:if to>30000 then print "connect timeout":close cn:end
@@ -60,9 +62,12 @@
 3040 return
 3200 if len(st$)<40 and c<>13 then st$=st$+chr$(c)
 3220 if left$(st$,15)="400 bad request" then print chr$(5);
-3225 if left$(st$,15)="400 bad request" then print " trying again!":goto 90
+3225 if left$(st$,15)="400 bad request" then close cn:print " trying again!":gosub 850:gosub 3000:goto 110
 3240 print chr$(c);
 3250 return
+850 sys 49152
+855 open cn,2,0,chr$(7)
+860 return
 4000 rem interactive portion
 4001 cy = 2: cx = 14
 4002 fw$=""

@@ -28,7 +28,7 @@ This directory is a **verbatim copy** of Bo Zimmerman’s **SwiftDriver** releas
 
 SwiftDriver is **not** part of the MIT (or other) license on the rest of `c64-ultimate` unless stated otherwise. It is licensed under the **Apache License 2.0** — see `LICENSE` and `NOTICE` in this folder.
 
-Programs in `c64u-kernal/` that `LOAD` `swiftdrvr49152.prg` are separate works that **use** this driver; keep this folder (or equivalent source + license) when you redistribute the driver binary.
+Programs in `c64u-kernal/` `LOAD "swiftdrvr"` — the same binary, written to disk under the shorter 8-character name (`c64u-kernal/swiftdrvr.prg`). Keep this folder (or equivalent source + license) when you redistribute the driver.
 
 ## Related in this repo
 

@@ -1,11 +1,13 @@
 10 rem ------------------------------------------------------------
 20 rem word of the day via bbs (c64 ultimate / kernal + swiftdriver)
 30 rem ------------------------------------------------------------
-40 cn=5:ld=0
-50 if ld=0 then ld=1:load "swiftdrvr",8,1
+40 cn=5
+50 if ld=1 then goto 60
+55 load "swiftdrvr",8,1
+57 ld=1
 60 sys 49152
 70 print chr$(147);chr$(5);"connecting ...":s=0
-80 open cn,2,0,chr$(7):rem 600 baud
+75 gosub 850
 90 cr$=chr$(13)
 100 ts$=cr$+"at"+cr$:gosub 700
 110 ts$="atdt bbs.retrogamecoders.com:6464"+cr$
@@ -29,6 +31,9 @@
 750 return
 800 if (peek(663) and 8)=0 then 800
 810 return
+850 sys 49152
+855 open cn,2,0,chr$(7)
+860 return
 1000 rem word guessing game
 1020 w$ = mid$(w$,5,len(w$)-6): c=0
 1030 print chr$(147)chr$(5)spc(3)"can you guess the word of the day?"
