@@ -1,12 +1,12 @@
 10 rem ------------------------------------------------------------
-20 rem load a web page (c64 ultimate / kernal + swiftdriver)
-30 rem use this if direct peek/poke at $de00 freezes on (s and 8)
-31 rem twin of ../http-get-kernal.bas
+20 rem load a web page (kernal + swiftdriver — c64 ultimate safe)
+30 rem same as http-get.bas but uses open/get#/print# not $de00 peek
+31 rem needs swiftdrvr49152.prg (see swiftdriver/ or c64u-kernal/)
 40 rem ------------------------------------------------------------
 50 tg$="":tt=0
 60 cn=5:rem file number for rs232
 70 ld=0:rem driver load flag
-80 if ld=0 then ld=1:load "swiftdrvr",8,1
+80 if ld=0 then ld=1:load "swiftdrvr49152",8,1
 90 sys 49152
 100 print chr$(147);chr$(5);"connecting ...":s=0
 110 open cn,2,0,chr$(7):rem 600 baud via kernal

@@ -29,6 +29,7 @@ What’s here
   - `swiftlink.bas`: C64 BASIC code that talks to the Python server over a SwiftLink-style interface / TCP bridge.  
   - `wotd.bas`: C64-side program for showing the Word of the Day coming from the Python side.  
   - `http-get.bas`, `word-search.bas`: HTTP clients using **direct PEEK/POKE** to the 6551 ACIA at `$DE00` (fast on real SwiftLink / VICE; can hang on some C64 Ultimate firmware).  
+  - `http-get-kernal.bas`: same as `http-get.bas` but via **SwiftDriver** + KERNAL (pair with `swiftdrvr49152.prg`; also in `c64u-kernal/`).  
   - `modem.bas`, etc. are experiments around dialing/connecting and displaying remote content.
 
 - **`swiftdriver/` — Bo Zimmerman’s SwiftDriver (full upstream tree)**  

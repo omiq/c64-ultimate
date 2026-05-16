@@ -4,7 +4,7 @@
 40 dim wd$(7): wd=1
 50 tg$="":tt=0
 60 cn=5:ld=0
-70 if ld=0 then ld=1:load "swiftdrvr49152",8,1
+70 if ld=0 then ld=1:load "swiftdrvr",8,1
 80 sys 49152
 90 print chr$(142);chr$(147);chr$(5);"connecting ...";chr$(31):s=0
 100 open cn,2,0,chr$(7):rem 600 baud

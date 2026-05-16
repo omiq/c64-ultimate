@@ -2,7 +2,7 @@
 20 rem word of the day via bbs (c64 ultimate / kernal + swiftdriver)
 30 rem ------------------------------------------------------------
 40 cn=5:ld=0
-50 if ld=0 then ld=1:load "swiftdrvr49152",8,1
+50 if ld=0 then ld=1:load "swiftdrvr",8,1
 60 sys 49152
 70 print chr$(147);chr$(5);"connecting ...":s=0
 80 open cn,2,0,chr$(7):rem 600 baud

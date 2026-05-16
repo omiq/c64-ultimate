@@ -9,7 +9,7 @@ They use **Bo Zimmerman’s SwiftDriver** loaded at `$C000`, then normal **KERNA
 | File | Purpose |
 |------|---------|
 | `swiftdrvr49152.prg` | SwiftDriver binary (same file as [`../swiftdriver/swiftdrvr49152.prg`](../swiftdriver/swiftdrvr49152.prg)) |
-| `http-get.bas` | Fetch and display a web page over HTTP |
+| `http-get.bas` | Fetch and display a web page over HTTP (same as root `http-get-kernal.bas`) |
 | `wotd.bas` | Word of the Day from the Python BBS (`bbs.py` on port 6464) |
 | `word-search.bas` | Compute! word-search demo (HTTP + on-screen game) |
 
@@ -34,6 +34,34 @@ If the modem still misbehaves after errors, try a **full power cycle** (not just
 3. Run the program, e.g. `LOAD "WORD-SEARCH",8` then `RUN`.
 
 Programs open the serial port at **600 baud** (`CHR$(7)`), which is slower but much more reliable in BASIC on the C64U than direct `POKE` at 38400.
+
+## Baud rate codes (`CHR$()` for `OPEN`)
+
+The fourth `OPEN` parameter selects the line speed. Pass `CHR$(n)` where `n` is from the table below:
+
+| Baud  | `CHR$()` code |
+|------:|:-------------:|
+|    50 |  1 |
+|    75 |  2 |
+|   110 |  3 |
+|   135 |  4 |
+|   150 |  5 |
+|   300 |  6 |
+|   600 |  7 |
+|  1200 |  8 |
+|  1800 |  9 |
+|  2400 | 10 |
+|  3600 | 11 |
+|  4800 | 12 |
+|  7200 | 13 |
+|  9600 | 14 |
+| 19200 | 15 |
+
+Turbo232 speeds (38400 / 57600 / 115200) **not supported** by this driver. Example — open at 9600 baud:
+
+```basic
+OPEN 5,2,0,CHR$(14)
+```
 
 ## Studying or changing the driver
 
