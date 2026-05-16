@@ -28,7 +28,11 @@ What’s here
 - **BASIC programs**  
   - `swiftlink.bas`: C64 BASIC code that talks to the Python server over a SwiftLink-style interface / TCP bridge.  
   - `wotd.bas`: C64-side program for showing the Word of the Day coming from the Python side.  
-  - `modem.bas`, `wotd.bas`, etc. are experiments around dialing/connecting and displaying remote content.
+  - `http-get.bas`, `word-search.bas`: HTTP clients using **direct PEEK/POKE** to the 6551 ACIA at `$DE00` (fast on real SwiftLink / VICE; can hang on some C64 Ultimate firmware).  
+  - `modem.bas`, etc. are experiments around dialing/connecting and displaying remote content.
+
+- **`c64u-kernal/` — alternate programs for C64 Ultimate users**  
+  If direct ACIA code freezes on `(S AND 8)=0` after a firmware update, use these instead. They load **SwiftDriver** (`swiftdrvr49152.prg`, GPLv3) and talk through KERNAL `OPEN` / `PRINT#` / `GET#` at **600 baud**. See [`c64u-kernal/README.md`](c64u-kernal/README.md) for menu settings, credits, and which version to try.
 
 - **C64 Ultimate PRG runner (`runner.py`, `rbas.sh`, `word-search.bas`)**  
   - `runner.py`: small helper that HTTP‑posts a `.prg` to a C64 Ultimate (or compatible) using its `/v1/runners:run_prg` endpoint.  
@@ -64,6 +68,19 @@ By default it:
 
 On the C64 side, I currently talk to it using a SwiftLink-style setup and `swiftlink.bas`, often via a TCPSerial bridge on the host. Exact wiring/details depend on your hardware and emulator, so you’ll likely need to adjust those for your setup.
 
+C64 Ultimate: if programs freeze while connecting
+-------------------------------------------------
+
+Recent C64 Ultimate firmware can leave **direct `$DE00` polling** (`PEEK(SR)` / bit 3) spinning forever. Symptoms: “connecting…” then a hang, or `timeout closed connection` on the host with nothing received.
+
+**Try this first:**
+
+1. Ultimate menu → **ACIA mapping `DE00/NMI`**, **Hardware mode SwiftLink** (see [`c64u-kernal/README.md`](c64u-kernal/README.md)).
+2. Use the programs in **`c64u-kernal/`** (`http-get.bas`, `wotd.bas`, `word-search.bas`) with **`swiftdrvr49152.prg`** on the same disk — `LOAD` driver, `SYS 49152`, then `RUN` the program.
+3. Tokenize and run via Ultimate HTTP runner, e.g. `./rbas.sh c64u-kernal/word-search.bas`.
+
+**Still on direct ACIA?** Root-level `http-get.bas` / `word-search.bas` / `wotd.bas` remain the choice for hardware SwiftLink, VICE, or setups where `POKE CT,31` (38400) works.
+
 Notes / caveats
 ---------------
 
@@ -98,10 +115,11 @@ Usage (for `word-search.bas`):
 ./rbas.sh
 ```
 
-You can also pass a different BASIC file:
+You can also pass a different BASIC file (including the C64 Ultimate KERNAL variants):
 
 ```bash
 ./rbas.sh my-program.bas
+./rbas.sh c64u-kernal/word-search.bas
 ```
 
 What `rbas.sh` does:
