@@ -1,83 +1,78 @@
 10 rem ------------------------------------------------------------
-20 rem compute! word search (c64 ultimate / kernal + swiftdriver)
-30 rem ------------------------------------------------------------
-70 if ld=1 then goto 80
-75 load "swiftdrvr",8,1
-77 ld=1
+20 rem compute! word search (c64u kernal + swiftdriver)
+30 rem based on simple.bas pattern + ../word-search.bas logic
+40 rem ------------------------------------------------------------
+50 dim wd$(7):wd=1
+60 tg$="":tt=0:cn=5
+70 if ld=0 then ld=1:print "loading driver...":load "swiftdrvr",8,1
 80 sys 49152
-81 dim wd$(7): wd=1
-82 tg$="":tt=0
-83 cn=5
-90 print chr$(142);chr$(147);chr$(5);"connecting ...";chr$(31):s=0
-95 gosub 850
-100 gosub 3000
-110 ts$="atdt php.retrogamecoders.com:80"+chr$(13)
-130 gosub 700
-140 rs$="":to=0
-150 to=to+1:if to>30000 then print "connect timeout":close cn:end
-160 get#cn,a$:if a$="" then goto 150
-170 rs$=rs$+a$
-180 if right$(rs$,7)<>"connect" and right$(rs$,7)<>"CONNECT" then goto 150
-190 crlf$=chr$(13)+chr$(10)
-200 ts$="get /word-search.php http/1.1"+crlf$
-210 ts$=ts$+"host: php.retrogamecoders.com"+crlf$+crlf$
-220 gosub 700
-230 ht=0:cr=0
-240 get#cn,a$:if a$="" then goto 240
-250 c=asc(a$)
-260 if c<>10 and c<>13 then cr=0:goto 240
-270 cr=cr+1:if cr<4 then goto 240
-280 ht=1
-290 get#cn,a$:if a$="" then goto 290
-300 c=asc(a$)
-310 if c>=97 and c<=122 then c=c-32
-320 if c=asc("<") then tt=1:tg$="":goto 290
-330 if c=asc(">") then tt=0:goto 290
-340 if tt=1 then tg$=tg$+chr$(c)
-350 if tt=0 and tg$<>"" then gosub 1000
-360 if tt=0 and tg$="" then gosub 3200
-370 goto 290
-700 rem send string ts$
-710 for i=1 to len(ts$)
-720 print#cn,mid$(ts$,i,1);
-730 next
-740 gosub 800
-750 return
-800 if (peek(663) and 8)=0 then 800
-810 return
-1000 rem process html tag in tg$
-1040 if tg$="h1" then print chr$(147);chr$(18);chr$(159);:tg$="":return
-1050 if tg$="/h1" then print chr$(156);chr$(5);chr$(13);:tg$="":return
-1055 if tg$="h2" then print chr$(158);:tg$="":return
-1060 if tg$="/h2" then print chr$(13);chr$(5);:tg$="":return
-1065 if tg$="br" then print chr$(13);:tg$="":return
-1070 if tg$="li" then print chr$(5);chr$(119);" ";:tg$="":st$="":return
-1075 if tg$="/li" then tg$="":wd$(wd)=st$:st$="":wd=wd+1:return
-1095 if tg$="/html" then gosub 3000:close cn:goto 4000:return
-2000 tg$="":return
+90 print chr$(142);chr$(147);chr$(5);"connecting ...";chr$(31)
+100 open cn,2,0,chr$(7) : rem 600 baud
+110 crlf$=chr$(13)+chr$(10)
+120 rem drain
+130 get#cn,a$:if a$<>"" then 130
+140 rem hangup first for clean state
+150 print#cn,"+++";:for w=1 to 800:next
+160 print#cn,"ath"+chr$(13);:for w=1 to 1500:next
+170 get#cn,a$:if a$<>"" then 170
+180 rem dial
+190 print#cn,"atdt php.retrogamecoders.com:80"+chr$(13);
+200 rem wait for connect
+210 rs$="":to=0
+220 get#cn,a$
+230 if a$="" then to=to+1:if to>30000 then print "timeout":close cn:end
+235 if a$="" then 220
+240 to=0:rs$=rs$+a$
+250 if right$(rs$,7)<>"CONNECT" and right$(rs$,7)<>"connect" then 220
+260 rem send http request
+270 ts$="get /word-search.php http/1.1"+crlf$
+280 ts$=ts$+"host: php.retrogamecoders.com"+crlf$+crlf$
+290 print#cn,ts$;
+300 rem skip headers — blank line = 4 cr/lf in row
+310 cr=0
+320 get#cn,a$:if a$="" then 320
+330 c=asc(a$)
+340 if c<>10 and c<>13 then cr=0:goto 320
+350 cr=cr+1:if cr<4 then 320
+360 rem main parse loop
+370 get#cn,a$:if a$="" then 370
+380 c=asc(a$)
+390 if c>=97 and c<=122 then c=c-32
+400 if c=asc("<") then tt=1:tg$="":goto 370
+410 if c=asc(">") then tt=0:goto 370
+420 if tt=1 then tg$=tg$+chr$(c)
+430 if tt=0 and tg$<>"" then gosub 1000
+440 if tt=0 and tg$="" then gosub 3200
+450 goto 370
+1000 rem process html tag in tg$ (uppercase — input was uppercased above)
+1040 if tg$="H1" then print chr$(147);chr$(18);chr$(159);:tg$="":return
+1050 if tg$="/H1" then print chr$(156);chr$(5);chr$(13);:tg$="":return
+1055 if tg$="H2" then print chr$(158);:tg$="":return
+1060 if tg$="/H2" then print chr$(13);chr$(5);:tg$="":return
+1065 if tg$="BR" then print chr$(13);:tg$="":return
+1070 if tg$="LI" then print chr$(5);chr$(119);" ";:tg$="":st$="":return
+1075 if tg$="/LI" then tg$="":wd$(wd)=st$:st$="":wd=wd+1:return
+1095 if tg$="/HTML" then gosub 3000:close cn:goto 4000
+1099 tg$="":return
 3000 rem hangup
-3010 ts$="+++":gosub 700
-3020 for w=1 to 500:next
-3030 ts$="ath"+chr$(13):gosub 700
-3040 return
+3010 print#cn,"+++";:for w=1 to 800:next
+3020 print#cn,"ath"+chr$(13);:for w=1 to 1500:next
+3030 return
 3200 if len(st$)<40 and c<>13 then st$=st$+chr$(c)
-3220 if left$(st$,15)="400 bad request" then print chr$(5);
-3225 if left$(st$,15)="400 bad request" then close cn:print " trying again!":gosub 850:gosub 3000:goto 110
+3220 if left$(st$,15)="400 BAD REQUEST" then print chr$(5);
+3225 if left$(st$,15)="400 BAD REQUEST" then close cn:print " trying again!":goto 10
 3240 print chr$(c);
 3250 return
-850 sys 49152
-855 open cn,2,0,chr$(7)
-860 return
 4000 rem interactive portion
-4001 cy = 2: cx = 14
+4001 cy=2:cx=14
 4002 fw$=""
 4003 gosub 10100
-4005 gosub 7000: print chr$(158);"use wasd, space, return";chr$(5): cy=3
-4010 x=1: y=2: ox=x: oy=y
-4020 poke 55296 + (oy*40)+ox, 1
-4030 poke 55296 + (y*40)+x, 0
-4040 ox=x: oy=y
-4050 get k$: if k$="" then goto 4050
+4005 gosub 7000:print chr$(158);"use wasd, space, return";chr$(5):cy=3
+4010 x=1:y=2:ox=x:oy=y
+4020 poke 55296+(oy*40)+ox,1
+4030 poke 55296+(y*40)+x,0
+4040 ox=x:oy=y
+4050 get k$:if k$="" then 4050
 4060 if k$="w" and y>2 then y=y-1
 4070 if k$="s" and y<11 then y=y+1
 4080 if k$="a" and x>1 then x=x-1
@@ -87,9 +82,9 @@
 4190 goto 4020
 5100 gosub 6000
 5190 return
-5200 cy=3: cx = 14: gosub 7000
-5220 for i = 0 to 7
-5230 if fw$=wd$(i) then print "found ";fw$;"!": gosub 10300: return
+5200 cy=3:cx=14:gosub 7000
+5220 for i=0 to 7
+5230 if fw$=wd$(i) then print "found ";fw$;"!":gosub 10300:return
 5240 next i
 5250 gosub 10200
 5260 print "             ":fw$=""
@@ -98,9 +93,9 @@
 6020 gosub 7000
 6030 if cx=14 then print l$;"                  "
 6040 if cx>14 then print l$;
-6050 cx=cx+1: fw$=fw$+l$
+6050 cx=cx+1:fw$=fw$+l$
 6060 return
-7000 poke 214, cy: poke 211, cx: sys 58732
+7000 poke 214,cy:poke 211,cx:sys 58732
 7020 return
 10100 poke 54296,15
 10140 return

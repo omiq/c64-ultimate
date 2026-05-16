@@ -11,7 +11,7 @@
 87 ld=1
 90 sys 49152
 100 print chr$(147);chr$(5);"connecting ...":s=0
-105 gosub 850:rem open rs232 at 600 baud
+105 gosub 600:rem open rs232 at 600 baud
 110 crlf$=chr$(13)+chr$(10)
 115 gosub 3000:rem hangup first for clean state
 120 ts$="atdt php.retrogamecoders.com:80"+chr$(13)
@@ -39,6 +39,9 @@
 360 if tt=0 and tg$="" then gosub 3200
 370 goto 290
 380 close cn:end
+600 rem open rs232 (no sys here — sys clears gosub stack)
+610 open cn,2,0,chr$(7):rem 600 baud = chr$(7)
+615 return
 700 rem send string ts$
 710 for i=1 to len(ts$)
 720 print#cn,mid$(ts$,i,1);
@@ -64,10 +67,6 @@
 3030 ts$="ath"+chr$(13):gosub 700
 3040 return
 3200 if len(st$)<40 and c<>13 then st$=st$+chr$(c)
-3220 if left$(st$,15)="400 BAD REQUEST" then close cn:print chr$(5);" trying again!":gosub 850:gosub 3000:goto 120
+3220 if left$(st$,15)="400 BAD REQUEST" then close cn:print chr$(5);" trying again!":sys 49152:gosub 600:gosub 3000:goto 120
 3240 print chr$(c);
 3250 return
-850 rem re-init wedge and open rs232 (after close or retry)
-855 sys 49152
-860 open cn,2,0,chr$(7):rem 600 baud = chr$(7)
-865 return
