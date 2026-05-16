@@ -12,11 +12,11 @@
 100 open 5,2,0,chr$(7)
 110 crlf$=chr$(13)+chr$(10)
 120 rem quiet-drain
-130 gosub 5500
+130 gosub 11000
 140 rem hangup first for clean state
 150 print#5,"+++";:for w=1 to 800:next
 160 print#5,"ath"+chr$(13);:for w=1 to 1500:next
-170 gosub 5500
+170 gosub 11000
 180 rem dial
 190 print#5,"atdt php.retrogamecoders.com:80"+chr$(13);
 200 rem wait for connect
@@ -60,12 +60,6 @@
 3010 print#5,"+++";:for w=1 to 800:next
 3020 print#5,"ath"+chr$(13);:for w=1 to 1500:next
 3030 return
-5500 rem drain until sustained quiet
-5510 q=0
-5520 get#5,a$
-5530 if a$<>"" then q=0:goto 5520
-5540 q=q+1:if q<500 then 5520
-5550 return
 3200 if len(st$)<40 and c<>13 then st$=st$+chr$(c)
 3220 if left$(st$,15)="400 BAD REQUEST" then print chr$(5);
 3225 if left$(st$,15)="400 BAD REQUEST" then close 5:print " trying again!":goto 10
@@ -127,3 +121,9 @@
 10360 next
 10370 poke 54276,32
 10380 return
+11000 rem drain until sustained quiet
+11010 q=0
+11020 get#5,a$
+11030 if a$<>"" then q=0:goto 11020
+11040 q=q+1:if q<500 then 11020
+11050 return

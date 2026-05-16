@@ -4,7 +4,7 @@
 40 close 5
 50 poke 56833,0:poke 56835,31:poke 56834,9:for w=1 to 500:next
 60 sys 49152
-70 open 5,2,0,chr$(7)
+70 open 5,2,0,chr$(15) : rem 19200 baud
 80 print "draining..."
 90 q=0
 100 get#5,a$

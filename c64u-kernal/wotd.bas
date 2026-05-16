@@ -11,15 +11,15 @@
 95 close 5 : rem clear any leftover open from prior stop
 100 open 5,2,0,chr$(7)
 110 rem quiet-drain
-120 gosub 5000
+120 gosub 11000
 130 rem hangup first for a clean modem state
 140 print#5,"+++";:for w=1 to 800:next
 150 print#5,"ath"+chr$(13);:for w=1 to 1500:next
-160 gosub 5000
+160 gosub 11000
 170 rem wake up modem
 180 print#5,chr$(13)+"at"+chr$(13);
 190 for w=1 to 500:next
-200 gosub 5000
+200 gosub 11000
 210 rem dial
 220 print#5,"atdt bbs.retrogamecoders.com:6464"+chr$(13);
 230 rem wait until first '#' marker arrives
@@ -60,15 +60,15 @@
 3010 print#5,"+++";:for w=1 to 800:next
 3020 print#5,"ath"+chr$(13);:for w=1 to 1500:next
 3030 return
-5000 rem drain until sustained quiet
-5010 q=0
-5020 get#5,a$
-5030 if a$<>"" then q=0:goto 5020
-5040 q=q+1:if q<500 then 5020
-5050 return
 4000 print chr$(147);chr$(5)
 4010 print "well done you guessed correctly!"
 4020 print chr$(13);gw$;chr$(13)
 4030 print gd$
 4040 get a$:if a$="" then 4040
 4050 end
+11000 rem drain until sustained quiet
+11010 q=0
+11020 get#5,a$
+11030 if a$<>"" then q=0:goto 11020
+11040 q=q+1:if q<500 then 11020
+11050 return
