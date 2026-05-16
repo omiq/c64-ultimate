@@ -3,33 +3,33 @@
 30 rem based on simple.bas pattern + ../wotd.bas logic
 40 rem raw tcp bbs (not http)
 50 rem ------------------------------------------------------------
-60 cn=5:w$="":i$="":sg=0
+60 w$="":i$="":sg=0
 70 if ld=0 then ld=1:print "loading driver...":load "swiftdrvr",8,1
 80 sys 49152
 90 print chr$(147);chr$(5);"connecting ..."
-100 open cn,2,0,chr$(7) : rem 600 baud
+100 open 5,2,0,chr$(7)
 110 rem drain receive buffer
-120 get#cn,a$:if a$<>"" then 120
+120 get#5,a$:if a$<>"" then 120
 130 rem hangup first for a clean modem state
-140 print#cn,"+++";:for w=1 to 800:next
-150 print#cn,"ath"+chr$(13);:for w=1 to 1500:next
-160 get#cn,a$:if a$<>"" then 160
+140 print#5,"+++";:for w=1 to 800:next
+150 print#5,"ath"+chr$(13);:for w=1 to 1500:next
+160 get#5,a$:if a$<>"" then 160
 170 rem wake up modem
-180 print#cn,chr$(13)+"at"+chr$(13);
+180 print#5,chr$(13)+"at"+chr$(13);
 190 for w=1 to 500:next
-200 get#cn,a$:if a$<>"" then 200
+200 get#5,a$:if a$<>"" then 200
 210 rem dial
-220 print#cn,"atdt bbs.retrogamecoders.com:6464"+chr$(13);
+220 print#5,"atdt bbs.retrogamecoders.com:6464"+chr$(13);
 230 rem wait until first '#' marker arrives
-240 get#cn,a$:if a$="" then 240
+240 get#5,a$:if a$="" then 240
 250 c=asc(a$):if c<>35 then 240
 260 rem read 4 #-terminated segments into w$
-270 get#cn,a$:if a$="" then 270
+270 get#5,a$:if a$="" then 270
 280 c=asc(a$)
 290 if c<>13 then i$=i$+chr$(c)
 300 if c=35 then w$=w$+i$:i$="":sg=sg+1:print chr$(147);"loading ";sg
 310 if sg<4 then 270
-320 gosub 3000:close cn
+320 gosub 3000:close 5
 1000 rem word guessing game
 1020 w$=mid$(w$,5,len(w$)-6):c=0
 1030 print chr$(147);chr$(5);spc(3);"can you guess the word of the day?"
@@ -55,8 +55,8 @@
 2040 get a$:if a$="" then 2040
 2050 end
 3000 rem hangup
-3010 print#cn,"+++";:for w=1 to 800:next
-3020 print#cn,"ath"+chr$(13);:for w=1 to 1500:next
+3010 print#5,"+++";:for w=1 to 800:next
+3020 print#5,"ath"+chr$(13);:for w=1 to 1500:next
 3030 return
 4000 print chr$(147);chr$(5)
 4010 print "well done you guessed correctly!"

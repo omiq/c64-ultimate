@@ -2,38 +2,38 @@
 20 rem load a web page (c64u kernal + swiftdriver)
 30 rem based on simple.bas pattern + ../http-get.bas logic
 40 rem ------------------------------------------------------------
-50 tg$="":tt=0:cn=5
+50 tg$="":tt=0
 60 if ld=0 then ld=1:print "loading driver...":load "swiftdrvr",8,1
 70 sys 49152
 80 print chr$(147);chr$(5);"connecting ..."
-90 open cn,2,0,chr$(7) : rem 600 baud
+90 open 5,2,0,chr$(7)
 100 crlf$=chr$(13)+chr$(10)
 110 rem drain anything sitting in the receive buffer
-120 get#cn,a$:if a$<>"" then 120
+120 get#5,a$:if a$<>"" then 120
 130 rem hangup first for a clean modem state
-140 print#cn,"+++";:for w=1 to 800:next
-150 print#cn,"ath"+chr$(13);:for w=1 to 1500:next
-160 get#cn,a$:if a$<>"" then 160
+140 print#5,"+++";:for w=1 to 800:next
+150 print#5,"ath"+chr$(13);:for w=1 to 1500:next
+160 get#5,a$:if a$<>"" then 160
 170 rem dial
-180 print#cn,"atdt php.retrogamecoders.com:80"+chr$(13);
+180 print#5,"atdt php.retrogamecoders.com:80"+chr$(13);
 190 rem wait for connect string
-200 rs$="":to=0
-210 get#cn,a$
-220 if a$="" then to=to+1:if to>30000 then print "timeout":close cn:end
+200 rs$="":tm=0
+210 get#5,a$
+220 if a$="" then tm=tm+1:if tm>30000 then print "timeout":close 5:end
 225 if a$="" then 210
-230 to=0:rs$=rs$+a$
+230 tm=0:rs$=rs$+a$
 240 if right$(rs$,7)<>"CONNECT" and right$(rs$,7)<>"connect" then 210
 250 rem send http request
 260 ts$="get / http/1.1"+crlf$+"host: php.retrogamecoders.com"+crlf$+crlf$
-270 print#cn,ts$;
+270 print#5,ts$;
 280 rem skip headers — wait for blank line (4 cr/lf in a row)
 290 cr=0
-300 get#cn,a$:if a$="" then 300
+300 get#5,a$:if a$="" then 300
 310 c=asc(a$)
 320 if c<>10 and c<>13 then cr=0:goto 300
 330 cr=cr+1:if cr<4 then 300
 340 rem main parse loop
-350 get#cn,a$:if a$="" then 350
+350 get#5,a$:if a$="" then 350
 360 c=asc(a$)
 370 if c>=97 and c<=122 then c=c-32
 380 if c=asc("<") then tt=1:tg$="":goto 350
@@ -50,14 +50,14 @@
 1065 if tg$="P" then print chr$(13);chr$(13);:tg$="":return
 1070 if tg$="LI" then print chr$(5);chr$(119);" ";:tg$="":return
 1075 if tg$="/LI" then tg$="":return
-1095 if tg$="/HTML" then gosub 3000:close cn:end
+1095 if tg$="/HTML" then gosub 3000:close 5:end
 1099 tg$="":return
 3000 rem hangup
-3010 print#cn,"+++";:for w=1 to 800:next
-3020 print#cn,"ath"+chr$(13);:for w=1 to 1500:next
+3010 print#5,"+++";:for w=1 to 800:next
+3020 print#5,"ath"+chr$(13);:for w=1 to 1500:next
 3030 return
 3200 rem build/print body bytes
 3210 if len(st$)<40 and c<>13 then st$=st$+chr$(c)
-3220 if left$(st$,15)="400 BAD REQUEST" then close cn:print " trying again!":goto 10
+3220 if left$(st$,15)="400 BAD REQUEST" then close 5:print " trying again!":goto 10
 3240 print chr$(c);
 3250 return

@@ -2,40 +2,40 @@
 20 rem compute! word search (c64u kernal + swiftdriver)
 30 rem based on simple.bas pattern + ../word-search.bas logic
 40 rem ------------------------------------------------------------
-50 dim wd$(7):wd=1
-60 tg$="":tt=0:cn=5
-70 if ld=0 then ld=1:print "loading driver...":load "swiftdrvr",8,1
-80 sys 49152
+50 tg$="":tt=0
+60 if ld=0 then ld=1:print "loading driver...":load "swiftdrvr",8,1
+70 sys 49152
+80 if dd=0 then dd=1:dim wd$(7):wd=1
 90 print chr$(142);chr$(147);chr$(5);"connecting ...";chr$(31)
-100 open cn,2,0,chr$(7) : rem 600 baud
+100 open 5,2,0,chr$(7)
 110 crlf$=chr$(13)+chr$(10)
 120 rem drain
-130 get#cn,a$:if a$<>"" then 130
+130 get#5,a$:if a$<>"" then 130
 140 rem hangup first for clean state
-150 print#cn,"+++";:for w=1 to 800:next
-160 print#cn,"ath"+chr$(13);:for w=1 to 1500:next
-170 get#cn,a$:if a$<>"" then 170
+150 print#5,"+++";:for w=1 to 800:next
+160 print#5,"ath"+chr$(13);:for w=1 to 1500:next
+170 get#5,a$:if a$<>"" then 170
 180 rem dial
-190 print#cn,"atdt php.retrogamecoders.com:80"+chr$(13);
+190 print#5,"atdt php.retrogamecoders.com:80"+chr$(13);
 200 rem wait for connect
-210 rs$="":to=0
-220 get#cn,a$
-230 if a$="" then to=to+1:if to>30000 then print "timeout":close cn:end
+210 rs$="":tm=0
+220 get#5,a$
+230 if a$="" then tm=tm+1:if tm>30000 then print "timeout":close 5:end
 235 if a$="" then 220
-240 to=0:rs$=rs$+a$
+240 tm=0:rs$=rs$+a$
 250 if right$(rs$,7)<>"CONNECT" and right$(rs$,7)<>"connect" then 220
 260 rem send http request
 270 ts$="get /word-search.php http/1.1"+crlf$
 280 ts$=ts$+"host: php.retrogamecoders.com"+crlf$+crlf$
-290 print#cn,ts$;
+290 print#5,ts$;
 300 rem skip headers — blank line = 4 cr/lf in row
 310 cr=0
-320 get#cn,a$:if a$="" then 320
+320 get#5,a$:if a$="" then 320
 330 c=asc(a$)
 340 if c<>10 and c<>13 then cr=0:goto 320
 350 cr=cr+1:if cr<4 then 320
 360 rem main parse loop
-370 get#cn,a$:if a$="" then 370
+370 get#5,a$:if a$="" then 370
 380 c=asc(a$)
 390 if c>=97 and c<=122 then c=c-32
 400 if c=asc("<") then tt=1:tg$="":goto 370
@@ -52,15 +52,15 @@
 1065 if tg$="BR" then print chr$(13);:tg$="":return
 1070 if tg$="LI" then print chr$(5);chr$(119);" ";:tg$="":st$="":return
 1075 if tg$="/LI" then tg$="":wd$(wd)=st$:st$="":wd=wd+1:return
-1095 if tg$="/HTML" then gosub 3000:close cn:goto 4000
+1095 if tg$="/HTML" then gosub 3000:close 5:goto 4000
 1099 tg$="":return
 3000 rem hangup
-3010 print#cn,"+++";:for w=1 to 800:next
-3020 print#cn,"ath"+chr$(13);:for w=1 to 1500:next
+3010 print#5,"+++";:for w=1 to 800:next
+3020 print#5,"ath"+chr$(13);:for w=1 to 1500:next
 3030 return
 3200 if len(st$)<40 and c<>13 then st$=st$+chr$(c)
 3220 if left$(st$,15)="400 BAD REQUEST" then print chr$(5);
-3225 if left$(st$,15)="400 BAD REQUEST" then close cn:print " trying again!":goto 10
+3225 if left$(st$,15)="400 BAD REQUEST" then close 5:print " trying again!":goto 10
 3240 print chr$(c);
 3250 return
 4000 rem interactive portion
