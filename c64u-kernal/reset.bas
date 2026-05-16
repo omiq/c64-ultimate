@@ -1,5 +1,5 @@
 10 rem ------------------------------------------------------------
-20 rem modem reset — run after stop/restore left things hung
+20 rem modem reset - run after stop/restore left things hung
 30 rem ------------------------------------------------------------
 40 close 5
 50 poke 56833,0:poke 56835,31:poke 56834,9:for w=1 to 500:next

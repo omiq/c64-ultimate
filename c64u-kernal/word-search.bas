@@ -9,7 +9,7 @@
 80 if dd=0 then dd=1:dim wd$(7):wd=1
 90 print chr$(147);chr$(5);"connecting ..."
 95 close 5 : rem clear any leftover open from prior stop
-100 open 5,2,0,chr$(7)
+100 open 5,2,0,chr$(15) : rem 19200 baud
 110 crlf$=chr$(13)+chr$(10)
 120 rem quiet-drain
 130 gosub 11000
@@ -30,7 +30,7 @@
 270 ts$="get /word-search.php http/1.1"+crlf$
 280 ts$=ts$+"host: php.retrogamecoders.com"+crlf$+crlf$
 290 print#5,ts$;
-300 rem skip headers — blank line = 4 cr/lf in row
+300 rem skip headers - blank line = 4 cr/lf in row
 310 cr=0
 320 get#5,a$:if a$="" then 320
 330 c=asc(a$)
@@ -46,7 +46,7 @@
 430 if tt=0 and tg$<>"" then gosub 1000
 440 if tt=0 and tg$="" then gosub 3200
 450 goto 370
-1000 rem process html tag in tg$ (uppercase — input was uppercased above)
+1000 rem process html tag in tg$ (uppercase - input was uppercased above)
 1040 if tg$="H1" then print chr$(147);chr$(18);chr$(159);:tg$="":return
 1050 if tg$="/H1" then print chr$(156);chr$(5);chr$(13);:tg$="":return
 1055 if tg$="H2" then print chr$(158);:tg$="":return

@@ -28,7 +28,7 @@
 250 rem send http request
 260 ts$="get / http/1.1"+crlf$+"host: php.retrogamecoders.com"+crlf$+crlf$
 270 print#5,ts$;
-280 rem skip headers — wait for blank line (4 cr/lf in a row)
+280 rem skip headers - wait for blank line (4 cr/lf in a row)
 290 cr=0
 300 get#5,a$:if a$="" then 300
 310 c=asc(a$)

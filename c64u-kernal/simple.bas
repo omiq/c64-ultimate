@@ -16,7 +16,7 @@
 100 for w=1 to 3000:next
 110 print#5,"get / http/1.1"+crlf$;
 120 print#5,"host: php.retrogamecoders.com"+crlf$+crlf$;
-130 rem read forever — keep looping whether or not bytes pending
+130 rem read forever - keep looping whether or not bytes pending
 140 get#5,a$
 150 if a$<>"" then print a$;
 160 goto 140
