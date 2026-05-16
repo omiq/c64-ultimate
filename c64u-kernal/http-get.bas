@@ -4,16 +4,17 @@
 40 rem ------------------------------------------------------------
 50 tg$="":tt=0
 60 if ld=0 then ld=1:print "loading driver...":load "swiftdrvr",8,1
+65 poke 56833,0:poke 56835,31:poke 56834,9:for w=1 to 500:next
 70 sys 49152
 80 print chr$(147);chr$(5);"connecting ..."
 90 open 5,2,0,chr$(7)
 100 crlf$=chr$(13)+chr$(10)
-110 rem drain anything sitting in the receive buffer
-120 get#5,a$:if a$<>"" then 120
+110 rem quiet-drain: keep reading until silent for q iters
+120 gosub 5000
 130 rem hangup first for a clean modem state
 140 print#5,"+++";:for w=1 to 800:next
 150 print#5,"ath"+chr$(13);:for w=1 to 1500:next
-160 get#5,a$:if a$<>"" then 160
+160 gosub 5000
 170 rem dial
 180 print#5,"atdt php.retrogamecoders.com:80"+chr$(13);
 190 rem wait for connect string
@@ -61,3 +62,9 @@
 3220 if left$(st$,15)="400 BAD REQUEST" then close 5:print " trying again!":goto 10
 3240 print chr$(c);
 3250 return
+5000 rem drain until sustained quiet
+5010 q=0
+5020 get#5,a$
+5030 if a$<>"" then q=0:goto 5020
+5040 q=q+1:if q<500 then 5020
+5050 return

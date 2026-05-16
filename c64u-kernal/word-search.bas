@@ -4,17 +4,18 @@
 40 rem ------------------------------------------------------------
 50 tg$="":tt=0
 60 if ld=0 then ld=1:print "loading driver...":load "swiftdrvr",8,1
+65 poke 56833,0:poke 56835,31:poke 56834,9:for w=1 to 500:next
 70 sys 49152
 80 if dd=0 then dd=1:dim wd$(7):wd=1
-90 print chr$(142);chr$(147);chr$(5);"connecting ...";chr$(31)
+90 print chr$(147);chr$(5);"connecting ..."
 100 open 5,2,0,chr$(7)
 110 crlf$=chr$(13)+chr$(10)
-120 rem drain
-130 get#5,a$:if a$<>"" then 130
+120 rem quiet-drain
+130 gosub 5500
 140 rem hangup first for clean state
 150 print#5,"+++";:for w=1 to 800:next
 160 print#5,"ath"+chr$(13);:for w=1 to 1500:next
-170 get#5,a$:if a$<>"" then 170
+170 gosub 5500
 180 rem dial
 190 print#5,"atdt php.retrogamecoders.com:80"+chr$(13);
 200 rem wait for connect
@@ -58,6 +59,12 @@
 3010 print#5,"+++";:for w=1 to 800:next
 3020 print#5,"ath"+chr$(13);:for w=1 to 1500:next
 3030 return
+5500 rem drain until sustained quiet
+5510 q=0
+5520 get#5,a$
+5530 if a$<>"" then q=0:goto 5520
+5540 q=q+1:if q<500 then 5520
+5550 return
 3200 if len(st$)<40 and c<>13 then st$=st$+chr$(c)
 3220 if left$(st$,15)="400 BAD REQUEST" then print chr$(5);
 3225 if left$(st$,15)="400 BAD REQUEST" then close 5:print " trying again!":goto 10

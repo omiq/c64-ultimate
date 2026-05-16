@@ -5,19 +5,20 @@
 50 rem ------------------------------------------------------------
 60 w$="":i$="":sg=0
 70 if ld=0 then ld=1:print "loading driver...":load "swiftdrvr",8,1
+75 poke 56833,0:poke 56835,31:poke 56834,9:for w=1 to 500:next
 80 sys 49152
 90 print chr$(147);chr$(5);"connecting ..."
 100 open 5,2,0,chr$(7)
-110 rem drain receive buffer
-120 get#5,a$:if a$<>"" then 120
+110 rem quiet-drain
+120 gosub 5000
 130 rem hangup first for a clean modem state
 140 print#5,"+++";:for w=1 to 800:next
 150 print#5,"ath"+chr$(13);:for w=1 to 1500:next
-160 get#5,a$:if a$<>"" then 160
+160 gosub 5000
 170 rem wake up modem
 180 print#5,chr$(13)+"at"+chr$(13);
 190 for w=1 to 500:next
-200 get#5,a$:if a$<>"" then 200
+200 gosub 5000
 210 rem dial
 220 print#5,"atdt bbs.retrogamecoders.com:6464"+chr$(13);
 230 rem wait until first '#' marker arrives
@@ -26,7 +27,7 @@
 260 rem read 4 #-terminated segments into w$
 270 get#5,a$:if a$="" then 270
 280 c=asc(a$)
-290 if c<>13 then i$=i$+chr$(c)
+290 if c<>13 and len(i$)<200 then i$=i$+chr$(c)
 300 if c=35 then w$=w$+i$:i$="":sg=sg+1:print chr$(147);"loading ";sg
 310 if sg<4 then 270
 320 gosub 3000:close 5
@@ -58,6 +59,12 @@
 3010 print#5,"+++";:for w=1 to 800:next
 3020 print#5,"ath"+chr$(13);:for w=1 to 1500:next
 3030 return
+5000 rem drain until sustained quiet
+5010 q=0
+5020 get#5,a$
+5030 if a$<>"" then q=0:goto 5020
+5040 q=q+1:if q<500 then 5020
+5050 return
 4000 print chr$(147);chr$(5)
 4010 print "well done you guessed correctly!"
 4020 print chr$(13);gw$;chr$(13)
