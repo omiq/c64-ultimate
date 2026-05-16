@@ -7,6 +7,7 @@
 65 poke 56833,0:poke 56835,31:poke 56834,9:for w=1 to 500:next
 70 sys 49152
 80 print chr$(147);chr$(5);"connecting ..."
+85 close 5 : rem clear any leftover open from prior stop
 90 open 5,2,0,chr$(7)
 100 crlf$=chr$(13)+chr$(10)
 110 rem quiet-drain: keep reading until silent for q iters

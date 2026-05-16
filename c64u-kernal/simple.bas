@@ -2,6 +2,7 @@
 15 poke 56833,0:poke 56835,31:poke 56834,9:for w=1 to 500:next
 20 sys 49152 : rem turn on swiftlink driver (also after reload restart)
 25 print "driver ready."
+28 close 5 : rem clear any leftover open from prior stop
 30 open 5,2,0,chr$(7) : rem 600 baud (chr$(14)=9600 if you want faster)
 35 crlf$=chr$(13)+chr$(10)
 40 rem drain any junk in buffer before dialing

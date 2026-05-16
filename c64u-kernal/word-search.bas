@@ -8,6 +8,7 @@
 70 sys 49152
 80 if dd=0 then dd=1:dim wd$(7):wd=1
 90 print chr$(147);chr$(5);"connecting ..."
+95 close 5 : rem clear any leftover open from prior stop
 100 open 5,2,0,chr$(7)
 110 crlf$=chr$(13)+chr$(10)
 120 rem quiet-drain
