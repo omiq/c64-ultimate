@@ -14,7 +14,7 @@ cd "$(dirname "$0")"
 DISK="kernal.d64"
 DRIVER_SRC="swiftdrvr.prg"
 DRIVER_C_SRC="swiftc.prg"
-PROGRAMS="http-get word-search wotd simple simple-wotd simple-c reset http2"
+PROGRAMS="http-get word-search wotd simple simple-wotd simple-c reset http2 diag"
 
 command -v petcat >/dev/null 2>&1 || { echo "petcat not found (install VICE)"; exit 1; }
 command -v c1541  >/dev/null 2>&1 || { echo "c1541 not found (install VICE)";  exit 1; }
@@ -40,6 +40,8 @@ c1541 -format "kernal,01" d64 "$DISK" \
       -write simple-c.prg       simple-c \
       -write "$DRIVER_C_SRC"    swiftc \
       -write http2.prg          http2 \
+      -write diag.prg           diag \
+      -write httpgetc.prg       httpgetc \
       -write reset.prg          reset
 
 echo

@@ -64,6 +64,7 @@ KERNAL_NMI_HI   = $FE           ; default NMI vector high byte
 ; In Bo's asm this is at the equivalent label, embedded in code space.
 ; ====================================================================
 SAVBYTE:    .byte 0
+saved_ba:   .byte 0
 
 ; ====================================================================
 ; _swift_do_open  —  asm lines 83-131 of swiftdrvr.asm
@@ -84,11 +85,18 @@ SAVBYTE:    .byte 0
 ;   6. Restore A/Y, RTS.
 ; ====================================================================
 _swift_do_open:
+        lda #$01
+        sta $0334               ; DEBUG: DOOPEN entered
+        lda ZP_DEVICE           ; sample $BA BEFORE F34A (it may clobber)
+        sta $0335               ; DEBUG: $BA at entry
+        sta saved_ba            ; stash for our own check after F34A
         jsr KERNAL_OPEN         ; do the normal IOPEN first
         pha                     ; save returned A
         tya
         pha                     ; save returned Y (via A)
-        lda ZP_DEVICE           ; current device #
+        lda ZP_DEVICE           ; sample again (post-F34A)
+        sta $0336               ; DEBUG: $BA after F34A
+        lda saved_ba            ; use OUR saved value for the decision
         cmp #$02
         beq @is_modem
         pla                     ; restore Y
@@ -97,6 +105,8 @@ _swift_do_open:
         rts                     ; not device 2 — done
 
 @is_modem:
+        lda #$02
+        sta $0337               ; DEBUG: @is_modem reached
         ; ---- reset our ring-buffer accounting ----
         lda #$00
         sta ZP_RHEAD

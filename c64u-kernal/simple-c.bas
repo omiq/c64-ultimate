@@ -4,7 +4,7 @@
 20 sys 49152 : rem init c driver
 25 print "c driver ready."
 28 close 5
-30 open 5,2,0,chr$(8) : rem 1200 baud
+30 open 5,2,0,chr$(7) : rem 600 baud (match working simple.bas)
 35 crlf$=chr$(13)+chr$(10)
 40 rem drain
 45 get#5,a$:if a$<>"" then print a$;:goto 45

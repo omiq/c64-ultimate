@@ -1,0 +1,50 @@
+Modules list:
+-------------
+entry.o:
+    CODE              Offs=000000  Size=000035  Align=00001  Fill=0000
+    EXEHDR            Offs=000000  Size=000002  Align=00001  Fill=0000
+hooks.o:
+    CODE              Offs=000035  Size=0000D2  Align=00001  Fill=0000
+nmi.o:
+    CODE              Offs=000107  Size=000029  Align=00001  Fill=0000
+
+
+Segment list:
+-------------
+Name                   Start     End    Size  Align
+----------------------------------------------------
+EXEHDR                000000  000001  000002  00001
+CODE                  00C000  00C12F  000130  00001
+
+
+Exports list by name:
+---------------------
+_nmi_handler              00C107 RLA    _swift_do_chrin           00C08F RLA    
+_swift_do_close           00C0D9 RLA    _swift_do_getin           00C098 RLA    
+_swift_do_open            00C037 RLA    _swift_do_put             00C0C1 RLA    
+
+
+
+Exports list by value:
+----------------------
+_swift_do_open            00C037 RLA    _swift_do_chrin           00C08F RLA    
+_swift_do_getin           00C098 RLA    _swift_do_put             00C0C1 RLA    
+_swift_do_close           00C0D9 RLA    _nmi_handler              00C107 RLA    
+
+
+
+Imports list:
+-------------
+_nmi_handler (nmi.o):
+    hooks.o                   hooks.s(53)
+_swift_do_chrin (hooks.o):
+    entry.o                   entry.s(30)
+_swift_do_close (hooks.o):
+    entry.o                   entry.s(29)
+_swift_do_getin (hooks.o):
+    entry.o                   entry.s(31)
+_swift_do_open (hooks.o):
+    entry.o                   entry.s(28)
+_swift_do_put (hooks.o):
+    entry.o                   entry.s(32)
+

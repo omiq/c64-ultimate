@@ -1,0 +1,15 @@
+al 00D000 .__BSS_LOAD__
+al 00D000 .__BSS_RUN__
+al 000000 .__BSS_SIZE__
+al 000100 .__STACKSIZE__
+al 000132 .__ZP_FILEOFFS__
+al 000002 .__ZP_LAST__
+al 00001A .__ZP_SIZE__
+al 000002 .__ZP_START__
+al 00C107 ._nmi_handler
+al 00C08F ._swift_do_chrin
+al 00C0D9 ._swift_do_close
+al 00C098 ._swift_do_getin
+al 00C037 ._swift_do_open
+al 00C0C1 ._swift_do_put
+al 00C000 ._swift_init
