@@ -13,14 +13,14 @@ cd "$(dirname "$0")"
 
 DISK="kernal.d64"
 DRIVER_SRC="swiftdrvr.prg"
-PROGRAMS="http-get word-search wotd simple reset"
+PROGRAMS="http-get word-search wotd simple simple-wotd reset"
 
 command -v petcat >/dev/null 2>&1 || { echo "petcat not found (install VICE)"; exit 1; }
 command -v c1541  >/dev/null 2>&1 || { echo "c1541 not found (install VICE)";  exit 1; }
 [ -f "$DRIVER_SRC" ] || { echo "missing $DRIVER_SRC"; exit 1; }
 
 echo "Tokenizing .bas -> .prg ..."
-rm -f http-get.prg wotd.prg word-search.prg simple.prg reset.prg
+rm -f http-get.prg wotd.prg word-search.prg simple.prg simple-wotd.prg reset.prg
 for f in $PROGRAMS; do
     [ -f "$f.bas" ] || { echo "missing $f.bas"; exit 1; }
     tr 'A-Z' 'a-z' < "$f.bas" | petcat -w2 -o "$f.prg" --
@@ -35,6 +35,7 @@ c1541 -format "kernal,01" d64 "$DISK" \
       -write word-search.prg    word-search \
       -write wotd.prg           wotd \
       -write simple.prg         simple \
+      -write simple-wotd.prg    simple-wotd \
       -write reset.prg          reset
 
 echo

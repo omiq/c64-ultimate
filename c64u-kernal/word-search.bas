@@ -25,7 +25,8 @@
 230 if a$="" then tm=tm+1:if tm>30000 then print "timeout":close 5:end
 235 if a$="" then 220
 240 tm=0:rs$=rs$+a$
-250 if right$(rs$,7)<>"CONNECT" and right$(rs$,7)<>"connect" then 220
+250 for i=1 to len(rs$)-6:if mid$(rs$,i,7)="CONNECT" then 260
+255 next i:goto 220
 260 rem send http request
 270 ts$="get /word-search.php http/1.1"+crlf$
 280 ts$=ts$+"host: php.retrogamecoders.com"+crlf$+crlf$
@@ -121,9 +122,10 @@
 10360 next
 10370 poke 54276,32
 10380 return
-11000 rem drain until sustained quiet
-11010 q=0
+11000 rem drain until sustained quiet (or total cap)
+11010 q=0:dt=0
 11020 get#5,a$
-11030 if a$<>"" then q=0:goto 11020
-11040 q=q+1:if q<500 then 11020
+11030 if a$<>"" then q=0:goto 11040
+11035 q=q+1
+11040 dt=dt+1:if q<500 and dt<8000 then 11020
 11050 return

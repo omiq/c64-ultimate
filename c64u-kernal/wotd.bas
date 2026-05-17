@@ -66,9 +66,10 @@
 4030 print gd$
 4040 get a$:if a$="" then 4040
 4050 end
-11000 rem drain until sustained quiet
-11010 q=0
+11000 rem drain until sustained quiet (or total cap)
+11010 q=0:tt=0
 11020 get#5,a$
-11030 if a$<>"" then q=0:goto 11020
-11040 q=q+1:if q<500 then 11020
+11030 if a$<>"" then q=0:goto 11040
+11035 q=q+1
+11040 tt=tt+1:if q<500 and tt<8000 then 11020
 11050 return

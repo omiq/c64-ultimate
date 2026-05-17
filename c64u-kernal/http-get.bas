@@ -24,7 +24,8 @@
 220 if a$="" then tm=tm+1:if tm>30000 then print "timeout":close 5:end
 225 if a$="" then 210
 230 tm=0:rs$=rs$+a$
-240 if right$(rs$,7)<>"CONNECT" and right$(rs$,7)<>"connect" then 210
+240 for i=1 to len(rs$)-6:if mid$(rs$,i,7)="CONNECT" then 250
+245 next i:goto 210
 250 rem send http request
 260 ts$="get / http/1.1"+crlf$+"host: php.retrogamecoders.com"+crlf$+crlf$
 270 print#5,ts$;
@@ -63,9 +64,10 @@
 3220 if left$(st$,15)="400 BAD REQUEST" then close 5:print " trying again!":goto 10
 3240 print chr$(c);
 3250 return
-5000 rem drain until sustained quiet
-5010 q=0
+5000 rem drain until sustained quiet (or total cap)
+5010 q=0:dt=0: print "{clear}draining..."
 5020 get#5,a$
-5030 if a$<>"" then q=0:goto 5020
-5040 q=q+1:if q<500 then 5020
+5030 if a$<>"" then print a$;:q=0:goto 5040
+5035 q=q+1
+5040 dt=dt+1:if q<50 and dt<8000 then 5020
 5050 return
