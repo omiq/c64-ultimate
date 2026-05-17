@@ -9,7 +9,7 @@
 80 sys 49152
 90 print chr$(147);chr$(5);"connecting ..."
 95 close 5 : rem clear any leftover open from prior stop
-100 open 5,2,0,chr$(15) : rem 19200 baud
+100 open 5,2,0,chr$(8) : rem 1200 baud
 110 rem quiet-drain
 120 gosub 11000
 130 rem hangup first for a clean modem state

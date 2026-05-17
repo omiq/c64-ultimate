@@ -8,7 +8,7 @@
 70 sys 49152
 80 print chr$(147);chr$(5);"connecting ..."
 85 close 5 : rem clear any leftover open from prior stop
-90 open 5,2,0,chr$(15) : rem 19200 baud
+90 open 5,2,0,chr$(8) : rem 1200 baud
 100 crlf$=chr$(13)+chr$(10)
 110 rem quiet-drain: keep reading until silent for q iters
 120 gosub 5000
@@ -24,7 +24,7 @@
 220 if a$="" then tm=tm+1:if tm>30000 then print "timeout":close 5:end
 225 if a$="" then 210
 230 tm=0:rs$=rs$+a$
-240 for i=1 to len(rs$)-6:if mid$(rs$,i,7)="CONNECT" then 250
+240 for i=1 to len(rs$)-6:t$=mid$(rs$,i,7):if t$="CONNECT" or t$="connect" then 250
 245 next i:goto 210
 250 rem send http request
 260 ts$="get / http/1.1"+crlf$+"host: php.retrogamecoders.com"+crlf$+crlf$
