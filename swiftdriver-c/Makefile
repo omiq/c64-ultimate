@@ -15,7 +15,7 @@
 
 CC      = cl65
 OUT     = swiftdrv.prg
-SRCS    = entry.s swift.c hooks.s nmi.s
+SRCS    = entry.s hooks.s nmi.s
 # -t none = freestanding (no crt0, no libc startup)
 # -C ... = our minimal linker config that pins code to $C000
 CFLAGS  = -t none -O -C swift-c000.cfg
