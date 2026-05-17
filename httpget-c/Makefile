@@ -21,7 +21,7 @@
 
 CC      = cl65
 OUT     = httpget.prg
-SRCS    = httpget.c
+SRCS    = httpget.c nmi.s
 CFLAGS  = -t c64 -O
 
 all: $(OUT)
@@ -29,7 +29,11 @@ all: $(OUT)
 $(OUT): $(SRCS)
 	$(CC) $(CFLAGS) -o $(OUT) $(SRCS)
 
+# build + deploy + auto-run on C64U via runner.py (no disk, no power cycle)
+run: $(OUT)
+	python3 ../runner.py $(OUT)
+
 clean:
 	rm -f *.o *.prg *.map *.lst
 
-.PHONY: all clean
+.PHONY: all run clean

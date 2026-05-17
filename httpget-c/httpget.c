@@ -33,8 +33,8 @@
 /* ====================================================================
  * Target URL — hardcoded for v1. Change & rebuild for now.
  * ==================================================================== */
-#define HOST   "php.retrogamecoders.com"
-#define PORT   "80"
+  #define HOST   "192.168.0.5"
+  #define PORT   "8080"
 #define PATH   "/"
 
 /* ====================================================================
@@ -98,30 +98,107 @@ static void delay(uint16_t loops) {
  * ACIA primitives
  * ==================================================================== */
 
-/* One-shot hardware init. Status-register write of any value resets
- * the ACIA per the WDC65C51 datasheet — must do this first. */
-static void acia_init(void) {
-    ACIA_STATUS  = 0;               /* soft reset */
-    delay(2000);                    /* let it settle */
-    ACIA_CONTROL = CTRL_1200_8N1;
-    ACIA_COMMAND = CMD_POLLED;
+/* ====================================================================
+ * NMI ring buffer (filled by nmi.s, drained here in C)
+ *
+ * Same idea as CCGMS / Bo Zimmerman SwiftDriver: when the 6551 has a
+ * byte, it raises NMI via SwiftLink's IRQ-to-NMI wire. Our ISR (in
+ * nmi.s) grabs the byte and pushes it into this 256-byte ring. C code
+ * here just drains the ring at its own pace — no byte loss during
+ * cputc / disk writes / etc.
+ *
+ * Both `ring` and `ring_tail` are referenced from asm via the symbols
+ * `_ring` / `_ring_tail` (cc65 prepends the underscore).
+ * ==================================================================== */
+unsigned char ring[256];             /* 256-byte ring buffer */
+unsigned char ring_tail;             /* ISR-only write index (wraps) */
+static unsigned char ring_head;      /* main-thread read index */
+
+extern void nmi_handler(void);       /* defined in nmi.s */
+
+/* Init replicating simple-c.bas's exact sequence (proven to work):
+ *   POKE 56833,0   -> reset ACIA
+ *   POKE 56835,31  -> CONTROL = $1F (19200, 8N1, internal clock)
+ *   POKE 56834,9   -> COMMAND = $09 (DTR on, RX IRQ on)
+ *   wait ~500ms
+ *   SYS swift_init / cbm_open      -> KERNAL RS232 setup
+ *   COMMAND = $09                  -> ensure RX IRQ on after KERNAL
+ *   install NMI vector             -> our ring-buffer ISR
+ */
+#define ACIA_LFN  6
+static uint8_t acia_init(void) {
+    static const char baud_name[2] = { 8, 0 };
+    uint8_t st;
+
+    /* Bo's SwiftDriver DOOPEN order:
+     *   1. JSR $F34A (KERNAL OPEN — alloc RS232 buffer)
+     *   2. Set ACIA CONTROL from baud byte
+     *   3. Set ACIA COMMAND = $09
+     *   4. Install NMI vector
+     *
+     * We match exactly. The earlier "POKE before cbm_open" order was
+     * a misread of simple-c.bas (those POKEs happened before SYS, not
+     * before OPEN — OPEN went through SwiftDriver which redid ACIA). */
+
+    /* Step 1: KERNAL OPEN first — alloc RS232 buffer at top of mem */
+    st = cbm_open(ACIA_LFN, 2, 0, baud_name);
+
+    /* Step 2: configure ACIA for 1200 baud, 8N1 */
+    ACIA_STATUS  = 0;                /* soft reset */
+    ACIA_CONTROL = 0x18;             /* CHR$(8) | $10 = 1200 baud */
+    delay_tenths(2);
+
+    /* Step 3: COMMAND = DTR on, RX IRQ on */
+    ACIA_COMMAND = 0x09;
+
+    /* Step 4: install NMI vector → our ring-buffer ISR */
+    ring_head = 0;
+    ring_tail = 0;
+    __asm__("sei");
+    *(volatile uint8_t*)0x0318 = (uint8_t)((uint16_t)nmi_handler & 0xFF);
+    *(volatile uint8_t*)0x0319 = (uint8_t)((uint16_t)nmi_handler >> 8);
+    __asm__("cli");
+
+    return st;
 }
 
-/* Non-blocking receive. Returns 1 + writes byte to *out if a byte
- * was ready; 0 if RX buffer empty. */
+static void acia_close(void) {
+    /* restore default NMI vector before closing */
+    __asm__("sei");
+    *(volatile uint8_t*)0x0318 = 0x47;
+    *(volatile uint8_t*)0x0319 = 0xFE;
+    __asm__("cli");
+    cbm_close(ACIA_LFN);
+}
+
+/* Non-blocking receive from ring buffer. Returns 1 + writes byte to
+ * *out if a byte was pending; 0 if ring is empty. */
 static uint8_t acia_recv(uint8_t *out) {
-    if (ACIA_STATUS & ST_RX_READY) {
-        *out = ACIA_DATA;
-        return 1;
-    }
-    return 0;
+    if (ring_head == ring_tail) return 0;
+    *out = ring[ring_head++];        /* wraps at 256 automatically */
+    return 1;
 }
 
-/* Blocking send. Spins on STATUS bit 4 until the TX register can
- * accept a byte, then writes it. */
+/* Blocking send with PETSCII→ASCII translation + inter-byte delay.
+ *
+ * cc65's c64 target stores C string literals as PETSCII bytes.
+ * Translation to ASCII:
+ *   PETSCII $C1-$DA → ASCII $41-$5A (uppercase)
+ *   PETSCII $41-$5A → ASCII $61-$7A (lowercase)
+ *
+ * Inter-byte delay (~50ms) matches CCGMS's human-typing rate. The
+ * C64U virtual modem's AT-command parser seems to need this — fast
+ * back-to-back bytes get accepted as echo but never parsed as a
+ * complete command. CCGMS works because humans type slowly. */
 static void acia_send(uint8_t b) {
+    uint16_t i;
+    if (b >= 0xC1 && b <= 0xDA)      b -= 0x80;
+    else if (b >= 0x41 && b <= 0x5A) b += 0x20;
+
     while (!(ACIA_STATUS & ST_TX_EMPTY)) { }
     ACIA_DATA = b;
+    /* ~50ms inter-byte delay (loop tuned by eye on 1MHz C64) */
+    for (i = 0; i < 2500; i++) { __asm__("nop"); }
 }
 
 /* Convenience: send a NUL-terminated C string. */
@@ -155,20 +232,30 @@ static uint8_t ieq(uint8_t a, uint8_t b) {
     return a == b;
 }
 
+/* STOP-key check via the KERNAL's stop-key scan latch at $91.
+ * Bit 7 = 0 when STOP held. Lets the user escape long busy-waits. */
+#define STOP_PRESSED  ((*(volatile uint8_t*)0x0091 & 0x80) == 0)
+
 /* Wait for a substring (case-insensitive) to appear in the RX stream.
- * Echoes everything received. Returns 1 on match, 0 on timeout.
+ * Echoes everything received. Returns:
+ *   1 = match
+ *   0 = timeout
+ *   2 = user pressed STOP
  *
- * `idle_secs` ≈ how many seconds of silence we tolerate before giving
- * up. Each iteration is a few µs on stock C64; we treat 200000 iters
- * as roughly one second of polling at our speed. */
+ * Loop body costs ~25 cycles, so budget = idle_secs * 40000 ≈ 1 wall
+ * second per "second" unit on stock C64 (1MHz). */
 static uint8_t wait_for(const char *needle, uint8_t idle_secs) {
     uint8_t  nlen = strlen(needle);
     uint8_t  pos = 0;
     uint8_t  b;
-    uint32_t budget = (uint32_t)idle_secs * 200000UL;
+    uint32_t budget = (uint32_t)idle_secs * 40000UL;
     uint32_t left = budget;
 
     while (left--) {
+        if (STOP_PRESSED) {
+            cputs("\n\r[STOP]\n\r");
+            return 2;
+        }
         if (acia_recv(&b)) {
             cputc(b);
             if (ieq(b, needle[pos])) {
@@ -183,18 +270,19 @@ static uint8_t wait_for(const char *needle, uint8_t idle_secs) {
     return 0;
 }
 
-/* Send the standard Hayes hangup sequence.
+/* Force clean hangup: DTR drop only.
  *
- * Hayes guard time spec: at least 1 second of NO data BEFORE +++ and
- * AT LEAST 1 second AFTER, otherwise modem treats +++ as data and
- * stays in online mode. We use 1.5s both sides to be safe. */
+ * Tested: simple-c (BASIC + C driver) without +++ATH connects fine
+ * to Python server. WITH +++ATH it breaks modem state and ERRORs
+ * subsequent commands. So we just drop DTR and let modem auto-reset. */
 static void hangup(void) {
-    cputs("\n\rhangup...\n\r");
-    delay_tenths(15);               /* 1.5s guard before +++ */
-    acia_send_str("+++");
-    delay_tenths(15);               /* 1.5s guard after  +++ */
-    acia_send_str("ATH\r");
-    delay_tenths(10);
+    cputs("\n\rhangup (dtr drop only)...\n\r");
+
+    /* DTR off: bit 0=0, keep bit 3=1 (RTS low) */
+    ACIA_COMMAND = 0x08;
+    delay_tenths(10);               /* ~1s with DTR low */
+    ACIA_COMMAND = 0x09;            /* DTR back on, RX IRQ on */
+    delay_tenths(5);                /* settle */
     drain(3000);
 }
 
@@ -211,43 +299,60 @@ int main(void) {
 
     clrscr();
     cputc(14);                      /* switch to lower/uppercase mode */
-    cputs("httpget v1\n\r");
+    cputs("httpget build " __DATE__ " " __TIME__ "\n\r");
     cputs("target: " HOST ":" PORT PATH "\n\r\n\r");
 
-    cputs("init acia 1200 8n1...\n\r");
-    acia_init();
+    cputs("init via kernal open + acia...\n\r");
+    {
+        uint8_t st = acia_init();
+        cprintf("kernal open status: %u\n\r", st);
+        /* Don't bail on non-zero — RS232 OPEN has weird status
+         * semantics. Proceed and see if ACIA still works. */
+    }
 
-    cputs("drain...\n\r");
-    drain(3000);
+   /* cputs("drain...\n\r");
+    drain(3000);*/
 
-    hangup();
+    //hangup();
 
-    /* Force modem into VERBOSE response mode (CONNECT not 1) plus
-     * echo on (so we see what we send). Some modems / C64U firmware
-     * default to terse numeric responses. We don't care about the
-     * response to THIS command — just drain and proceed. */
-    cputs("\n\rconfig modem (atv1e1)...\n\r");
-    acia_send_str("ATV1E1\r");
-    delay_tenths(10);
-    drain(3000);
+    /* Verify modem responsiveness — send bare AT, listen 3s for
+     * any response. If we see "ok" or "0", modem is alive in
+     * command mode. */
+    cputs("\n\rprobe modem (AT)...\n\r");
+    acia_send_str("AT\n");
+    {
+        uint8_t  secs;
+        uint16_t inner;
+        uint8_t  b;
+        for (secs = 0; secs < 3; secs++) {
+            for (inner = 0; inner < 5000; inner++) {
+                if (STOP_PRESSED) return 2;
+                if (acia_recv(&b)) cputc(b);
+            }
+        }
+    }
 
     cputs("\n\rdialing...\n\r");
-    acia_send_str("ATDT " HOST ":" PORT "\r");
+    acia_send_str("ATDT" HOST ":" PORT "\n");
 
-    /* Wait for CONNECT (verbose) or 1 (numeric — in case ATV1 didn't
-     * take). Try CONNECT first since most C64U firmware does verbose
-     * after ATV1. */
-    cputs("\n\rwaiting connect...\n\r");
-    if (!wait_for("CONNECT", 60)) {
-        cputs("\n\rno connect - abort\n\r");
-        return 1;
+    /* C64U virtual modem doesn't seem to emit CONNECT verbosely.
+     * Just settle ~5 sec while echoing any bytes (dial echo, status),
+     * then send the GET — if TCP is up, server response will arrive.
+     * STOP key escapes early. */
+    cputs("\n\rsettle 5s (echo modem)...\n\r");
+    {
+        uint8_t  secs;
+        uint16_t inner;
+        uint8_t  b;
+        for (secs = 0; secs < 5; secs++) {
+            for (inner = 0; inner < 5000; inner++) {
+                if (STOP_PRESSED) { cputs("\n\r[STOP]\n\r"); return 2; }
+                if (acia_recv(&b)) cputc(b);
+            }
+        }
     }
-    cputs("\n\rCONNECTED\n\r\n\r");
 
-    /* small pause before sending request */
-    delay(20000);
-
-    cputs("sending GET...\n\r");
+    cputs("\n\rsending GET...\n\r");
     acia_send_str("GET " PATH " HTTP/1.1\r\n"
                   "Host: " HOST "\r\n"
                   "Connection: close\r\n"
@@ -266,36 +371,59 @@ int main(void) {
      *   - Echo every byte to screen
      *   - Once past the 4-byte \r\n\r\n header terminator, also
      *     append to the SEQ file
-     *   - Exit when RX stays silent for "idle" iterations
+     *   - Exit when RX stays silent for ~30 seconds (server done)
+     *   - Allow STOP key to abort
+     *
+     * Idle budget: 30 sec * 40000 iters/sec = 1.2M iters before bail.
+     * Resets to 0 every time a byte arrives, so a slow start or
+     * mid-transfer pause is fine.
      */
-    idle = 0;
-    while (idle < 30000) {
-        if (!acia_recv(&b)) {
-            idle++;
-            continue;
-        }
-        idle = 0;
-        cputc(b);
+    /* Silent receive — uint16 counters keep loop body cheap so
+     * timeouts are predictable. Outer loop = "seconds" via inner
+     * count. Inner ~12000 iters ≈ 1 sec wall-clock on 1MHz C64
+     * (rough cc65 calibration — bump if too fast). */
+    {
+        uint16_t inner;
+        uint8_t  silent_secs = 0;
+        uint16_t total_rx = 0;
+        const uint8_t MAX_IDLE_SECS = 10;
 
-        /* Header-skip state machine: count consecutive CR/LF bytes.
-         * 4 in a row = end of headers (CRLF CRLF). */
-        if (in_headers) {
-            if (b == 13 || b == 10) {
-                cr_lf_count++;
-                if (cr_lf_count >= 4) {
-                    in_headers = 0;
-                    cputs("\n\r--- body ---\n\r");
+        while (silent_secs < MAX_IDLE_SECS) {
+            uint8_t got_this_sec = 0;
+            for (inner = 0; inner < 12000; inner++) {
+                if (STOP_PRESSED) { cputs("\n\r[STOP]\n\r"); goto recv_done; }
+                if (!acia_recv(&b)) continue;
+                got_this_sec = 1;
+                total_rx++;
+
+                /* echo to screen — safe with NMI ring buffer absorbing
+                 * bytes while cputc scrolls. Print printable ascii as
+                 * char, control bytes as <NN> for visibility. */
+                if (b >= 32 && b < 127) cputc(b);
+                else if (b == 13) cputs("<CR>");
+                else if (b == 10) cputs("<LF>\n\r");
+                else cprintf("<%02x>", b);
+
+                if (in_headers) {
+                    if (b == 13 || b == 10) {
+                        cr_lf_count++;
+                        if (cr_lf_count >= 4) {
+                            in_headers = 0;
+                            cputs("\n\r=== BODY ===\n\r");
+                        }
+                    } else {
+                        cr_lf_count = 0;
+                    }
+                } else {
+                    if (fd_status == 0) cbm_write(RESULT_LFN, &b, 1);
+                    body_bytes++;
                 }
-            } else {
-                cr_lf_count = 0;
             }
-        } else {
-            /* In body — write to SEQ file too. */
-            if (fd_status == 0) {
-                cbm_write(RESULT_LFN, &b, 1);
-            }
-            body_bytes++;
+            if (got_this_sec) silent_secs = 0;
+            else              silent_secs++;
         }
+recv_done:
+        cprintf("\n\rtotal RX bytes: %u\n\r", total_rx);
     }
 
     if (fd_status == 0) {
@@ -306,5 +434,6 @@ int main(void) {
     cprintf("body bytes saved: %u\n\r", body_bytes);
 
     hangup();
+    acia_close();
     return 0;
 }
