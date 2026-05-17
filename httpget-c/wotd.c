@@ -298,10 +298,8 @@ int main(void) {
     uint8_t  fd_status;
 
     clrscr();
-    cputc(14);                      /* switch to lower/uppercase mode */
-    cputs("build " __DATE__ " " __TIME__ "\n\r");
-    cputs("target: " HOST ":" PORT PATH "\n\r\n\r");
-
+    bordercolor(COLOR_BLUE);
+    textcolor(COLOR_WHITE);
 
     cputs("init\n\r");
     {
@@ -327,10 +325,7 @@ int main(void) {
     cputs("\n\rdialing...\n\r");
     acia_send_str("ATDT" HOST ":" PORT "\n");
 
-  
-
-
-    cputs("\n\r--- response ---\n\r");
+      
 
     /* Receive loop:
      *   - Echo every byte to screen
@@ -364,17 +359,30 @@ int main(void) {
                 /* echo to screen — safe with NMI ring buffer absorbing
                  * bytes while cputc scrolls. Print printable ascii as
                  * char, control bytes as <NN> for visibility. */
-                if (b >= 32 && b < 127) cputc(b);
-                else if (b == 13) cputs("\r");
-                else if (b == 10) cputs("\n");
-                else cprintf("<%02x>", b);
+                switch (b) {
+                case 35:
+                    cputs("\r\n");
+                    break;
+                case 13:
+                    cputs("\r");
+                    break;
+                case 10:
+                    cputs("\n");
+                    break;
+                default:
+                    if (b >= 32 && b < 127)
+                        cputc(b);
+                    else
+                        cprintf("<%02x>", b);
+                    break;
+                }
 
                 if (in_headers) {
                     if (b == 13 || b == 10) {
                         cr_lf_count++;
                         if (cr_lf_count >= 4) {
                             in_headers = 0;
-                            cputs("\n\r=== BODY ===\n\r");
+                            
                         }
                     } else {
                         cr_lf_count = 0;
@@ -388,15 +396,9 @@ int main(void) {
             else              silent_secs++;
         }
 recv_done:
-        cprintf("\n\rtotal RX bytes: %u\n\r", total_rx);
+        cprintf("\n\rtotal bytes: %u\n\r", total_rx);
     }
 
-    if (fd_status == 0) {
-        cbm_close(RESULT_LFN);
-    }
-
-    cputs("\n\r--- done ---\n\r");
-    cprintf("body bytes saved: %u\n\r", body_bytes);
 
     hangup();
     acia_close();
