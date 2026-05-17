@@ -20,8 +20,8 @@
 # --------------------------------------------------------------------
 
 CC      = cl65
-OUT     = httpget.prg
-SRCS    = httpget.c nmi.s
+OUT     = wotd.prg
+SRCS    = wotd.c nmi.s
 CFLAGS  = -t c64 -O
 
 all: $(OUT)
