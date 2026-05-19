@@ -19,7 +19,7 @@ The user has ADHD and explicitly does not want fancy editor UX (no drag-drop, no
 1. **Stack**: Python + FastAPI backend, CodeMirror 6 frontend (vanilla JS, no framework for v1), flat `.md` files, optional SQLite FTS5 later, APScheduler in-process for scheduled tasks, single bearer token auth behind Tailscale.
 2. **Conventions** (see README for full list):
    - YAML frontmatter with `status` / `project` / `due` / `tags`
-   - Standard markdown links `[text](path.md)` — defer `[[wikilinks]]` until we feel pain
+   - Both `[[wikilinks]]` (Obsidian-style, primary) and standard `[text](path.md)` links are supported. Wikilink resolution + click-to-create spec is in `WIKILINKS.md`; reference implementation in `link_resolver.py`.
    - Daily notes at `daily/YYYY-MM-DD.md`
    - Agent-written files quarantined under `claude/` until promoted
    - Audit log at `.notehub/audit.jsonl` (append-only; **commit it** in the vault repo — it's the agent history)
@@ -63,9 +63,12 @@ Pick one based on what the user wants in this session:
        ask.py
        tasks.py
        audit.py
+       links.py       /resolve-links, /files/create-from-wikilink
      git_worker.py    asyncio.Queue + debounced commit + push tick
      vault.py         path helpers, frontmatter parsing, safety (no `..` escapes)
+     links.py         LinkIndex + resolver (drop in link_resolver.py from bootstrap)
    ```
+   The `LinkIndex` should be built at startup and held on app state; mutate it on every `PUT /files`, `POST /files/move`, `DELETE /files`, and `POST /files/create-from-wikilink`. Log basename collisions to audit.
 2. **Build the minimal web editor** — single page, CodeMirror 6, flat sidebar list, `Cmd+P` quick-open, `Cmd+K` "ask the vault". Static files served by FastAPI.
 3. **Wire `/ask`** — needs `anthropic` SDK, search results → prompt template → response with citations.
 4. **Migrate one scattered automation** into `.notehub/tasks.yaml` (user said they'd collect their priority list).
@@ -82,7 +85,8 @@ Pick one based on what the user wants in this session:
 - Don't introduce a database for primary storage — files are the source of truth. SQLite is only an optional FTS index.
 - Don't have the API block on `git push`. Ever.
 - Don't write directly into the user's main notes from agents in v1 — write to `claude/` and let the user promote.
-- Don't add wikilinks unless the user asks; standard `[text](path.md)` links keep parsing trivial.
+- Don't rewrite `.md` files to "fix" wikilinks. Keep `[[...]]` intact; resolve at render time only.
+- Don't add a fuzzy / free-text fallback for unresolved wikilinks — silent wrong matches are worse than no match (explicitly rejected). Unresolved → render dim, click creates the file.
 
 ## Out-of-scope for v1
 

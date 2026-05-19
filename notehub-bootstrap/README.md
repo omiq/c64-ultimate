@@ -24,7 +24,7 @@ The editor is intentionally boring. The value is the API and the hub.
 - Todos are GitHub-style `- [ ]` / `- [x]` lines. Inline `due:2026-05-20` / `project:c64` tags allowed.
 - Daily notes live at `daily/YYYY-MM-DD.md`.
 - Agent-written files go under `claude/` until promoted by a human edit.
-- Links: standard `[text](path.md)` to keep parsing simple. (Revisit `[[wikilinks]]` later if needed.)
+- Links: both `[[wikilinks]]` (Obsidian-compatible, primary) and standard `[text](path.md)` are supported. See `WIKILINKS.md` for the resolution + click-to-create spec; reference implementation in `link_resolver.py`.
 
 ## Directory layout
 
@@ -85,8 +85,10 @@ All endpoints require `Authorization: Bearer <token>`. JSON in/out unless noted.
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/links?path=<rel>`          | `{outgoing:[...], backlinks:[...]}`. |
-| `GET` | `/graph?root=<rel>&depth=2`  | Subgraph for the given root note. |
+| `GET`  | `/links?path=<rel>`                 | `{outgoing:[...], backlinks:[...]}`. |
+| `GET`  | `/graph?root=<rel>&depth=2`         | Subgraph for the given root note. |
+| `POST` | `/resolve-links`                    | Batch wikilink resolution for renderer. Body: `{source_path, targets:[...]}` → `[{target, path?, anchor?, alias?, status}]`. See `WIKILINKS.md`. |
+| `POST` | `/files/create-from-wikilink`       | `{source_path, target_text}` → `{path}`. Creates a new note for an unresolved wikilink in the same folder as the source. |
 
 ### Scheduled coworks (the real automation hub)
 
@@ -130,6 +132,6 @@ _(Filled in by user — these become the first `tasks.yaml` entries.)_
 
 ## Open questions
 
-- Wikilinks vs standard links — defer until we feel the pain.
-- Whether to render preview server-side or client-side (lean client-side, marked.js or similar).
+- Whether to render preview server-side or client-side (lean client-side, marked.js + post-process for wikilinks).
 - Whether `/ask` should stream responses — probably yes once it works at all.
+- Auto-rewrite wikilinks when a target file is renamed? Obsidian does this; we currently do not (and the resolver doesn't need it because resolution is by basename, not path).
