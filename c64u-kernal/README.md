@@ -1,43 +1,61 @@
 # C64 Ultimate — KERNAL / SwiftDriver programs
 
-If the **direct SwiftLink** programs in the repo root (`http-get.bas`, `wotd.bas`, `word-search.bas`) **freeze** while waiting on `PEEK(SR)` / `(S AND 8)=0`, try these versions instead.
+If the **direct SwiftLink** programs in the repo root (`http-get.bas`, `wotd.bas`, `word-search.bas`) **freeze** while waiting on `PEEK(SR)` / `(S AND 8)=0`, use these versions instead.
 
-They use **Bo Zimmerman’s SwiftDriver** loaded at `$C000`, then normal **KERNAL** `OPEN` / `PRINT#` / `GET#` — the same approach described in the Ultimate’s internal modem docs and community examples such as [v8id-mmo/swiftlink-basic](https://github.com/v8id-mmo/swiftlink-basic).
+They use **Bo Zimmerman’s SwiftDriver** (`LOAD "swiftdrvr",8,1` then `SYS 49152`), then normal **KERNAL** `OPEN` / `PRINT#` / `GET#`. Same approach as the Ultimate’s internal modem docs and [v8id-mmo/swiftlink-basic](https://github.com/v8id-mmo/swiftlink-basic).
 
-## What’s in this folder
+**Verified on C64 Ultimate (2026):** `SIMPLE`, `SIMPLE-WOTD`, `HTTP-GET`, and `WORD-SEARCH` all work. Word-search is slower (HTTP download + game) but completes successfully.
 
-| File | Purpose |
-|------|---------|
-| `swiftdrvr.prg` | SwiftDriver binary on disk (8-char name; same bytes as [`../swiftdriver/swiftdrvr49152.prg`](../swiftdriver/swiftdrvr49152.prg)) |
-| `http-get.bas` | Fetch and display a web page over HTTP (same as root `http-get-kernal.bas`) |
-| `wotd.bas` | Word of the Day from the Python BBS (`bbs.py` on port 6464) |
-| `word-search.bas` | Compute! word-search demo (HTTP + on-screen game) |
+## Quick start (readers / Compute! disk)
 
-**Source code, assembly, and license** for the driver live in **[`../swiftdriver/`](../swiftdriver/)** (`swiftdrvr.asm`, `LICENSE`, `PROVENANCE.md`). On a C64 disk the driver must be named **`SWIFTDRVR`** (copy `swiftdrvr.prg` from here, or rename the upstream `swiftdrvr49152.prg` — long names are awkward on real drives).
+1. Ultimate menu → **ACIA `DE00/NMI`**, **Hardware mode SwiftLink**.
+2. Build or copy **`kernal.d64`** (see [`build-disk.sh`](build-disk.sh) or [`../DISK_CREATION.md`](../DISK_CREATION.md)).
+3. On the C64: `LOAD"SIMPLE",8` then `RUN` — confirms driver + HTTP work.
+4. Then try `HTTP-GET`, `SIMPLE-WOTD`, `WORD-SEARCH`.
 
-## C64 Ultimate menu settings
+Disable **JiffyDOS** if KERNAL programs misbehave (vector hook conflicts).
 
-Before running, enable the emulated modem (factory defaults usually work):
+## Programs on `kernal.d64`
 
-1. Ultimate menu → **ACIA (6551) mapping** → **`DE00/NMI`**
-2. **Hardware mode** → **SwiftLink**
-3. Ensure nothing else is mapped to `$DE00` (I/O conflict = garbage or hangs)
+| Disk name | Source | Purpose | Status |
+|-----------|--------|---------|--------|
+| `SWIFTDRVR` | `swiftdrvr.prg` | Bo Zimmerman’s driver at `$C000` | Required |
+| `SIMPLE` | `simple.bas` | Minimal HTTP GET smoke test | **Works** |
+| `SIMPLE-WOTD` | `simple-wotd.bas` | Raw TCP to BBS (`bbs.py` :6464) | **Works** |
+| `HTTP-GET` | `http-get.bas` | Fetch page + HTML tag formatting | **Works** |
+| `WORD-SEARCH` | `word-search.bas` | HTTP word-search game | **Works** (slower) |
+| `WOTD` | `wotd.bas` | Word-of-the-day guessing game via BBS | Untested recently |
+| `HTTPGETC` | `httpgetc.prg` | Pure-C HTTP client (no driver file) | See `httpget-c/` |
+| `SIMPLE-C` | `simple-c.bas` | BASIC wrapper experiments | Dev |
+| `SWIFTC` | `swiftc.prg` | C-port driver (`swiftdriver-c/`) | Dev / `diag.bas` |
+| `DIAG` | `diag.bas` | Debug SwiftC KERNAL hooks | Dev |
+| `RESET` | `reset.bas` | Utility | Dev |
+| `HTTP2` | `http2.bas` | Alternate HTTP experiment | Dev |
 
-If the modem still misbehaves after errors, try a **full power cycle** (not just reset).
+**Start with `SIMPLE`.** It is the smallest program that proves the stack (driver load, dial, HTTP, receive loop).
 
-## How to run on a real C64 / Ultimate
+## How the programs work
 
-1. Copy **`swiftdrvr.prg`** plus the program you want onto your C64 drive (disk image or SD/USB). See [`../DISK_CREATION.md`](../DISK_CREATION.md) to build `kernal.d64`.
-2. Load the driver **once per power-on** (each program below does this automatically if needed):
-   - `LOAD "SWIFTDRVR",8,1` — change `8` to your device number.
-   - `SYS 49152`
-3. Run the program, e.g. `LOAD "WORD-SEARCH",8` then `RUN`.
+Typical flow (see `simple.bas` / `http-get.bas`):
 
-Programs open the serial port at **600 baud** (`CHR$(7)`), which is slower but much more reliable in BASIC on the C64U than direct `POKE` at 38400.
+1. `LOAD "swiftdrvr",8,1` once per session (variable `A` or `LD` prevents reload loop after `LOAD` restarts the program).
+2. Optional direct ACIA poke (`POKE 56833,0` etc.) before `SYS 49152`.
+3. `SYS 49152` — **never call `SYS` inside a `GOSUB`** (clears return stack → `RETURN WITHOUT GOSUB`).
+4. `OPEN 5,2,0,CHR$(n)` — see baud table below.
+5. Drain RX buffer, `+++` / `ATH` hangup for clean state.
+6. `PRINT#5,"ATDT host:port"+CHR$(13)` — no space after `ATDT` on C64U.
+7. `GET#5` receive loop (or HTML parsing in `HTTP-GET` / `WORD-SEARCH`).
+
+**Baud in current sources:**
+
+| Program | `OPEN` speed | Notes |
+|---------|--------------|-------|
+| `simple.bas` | `CHR$(7)` = 600 | Safest; good first test |
+| `http-get.bas`, `word-search.bas` | `CHR$(8)` = 1200 | Faster; still reliable here |
+
+To go faster, try `CHR$(14)` (9600) on `SIMPLE` first before changing the larger programs.
 
 ## Baud rate codes (`CHR$()` for `OPEN`)
-
-The fourth `OPEN` parameter selects the line speed. Pass `CHR$(n)` where `n` is from the table below:
 
 | Baud  | `CHR$()` code |
 |------:|:-------------:|
@@ -57,45 +75,54 @@ The fourth `OPEN` parameter selects the line speed. Pass `CHR$(n)` where `n` is 
 |  9600 | 14 |
 | 19200 | 15 |
 
-Turbo232 speeds (38400 / 57600 / 115200) **not supported** by this driver. Example — open at 9600 baud:
+Turbo232 speeds (38400+) are **not** supported by SwiftDriver.
 
-```basic
-OPEN 5,2,0,CHR$(14)
-```
-
-## Studying or changing the driver
-
-See **[`../swiftdriver/`](../swiftdriver/)**:
-
-- `swiftdrvr.asm` — 6502 source  
-- `swiftdrvr.LADS.prg` — LADS project  
-- `README` — baud rates, `SYS 49152`, example BASIC  
-- `PROVENANCE.md` — where this copy came from  
-
-Rebuild or relocate the driver with your own toolchain; respect the **Apache 2.0** terms in `../swiftdriver/LICENSE`.
-
-## Tokenizing for C64 Ultimate HTTP runner
-
-From the repo root (with `petcat` and `.env` set up — see main [`README.md`](../README.md)):
+## Build the disk
 
 ```bash
-./rbas.sh c64u-kernal/word-search.bas
-./rbas.sh c64u-kernal/http-get.bas
-./rbas.sh c64u-kernal/wotd.bas
+cd c64u-kernal
+./build-disk.sh
 ```
 
-## Credits
+Requires **petcat** and **c1541** (VICE). Tokenizes all `.bas` files, writes `kernal.d64`, optionally FTPs to the Ultimate (edit host/path in the script).
 
-| Component | Author / source | License |
-|-----------|-----------------|---------|
-| **SwiftDriver** | Bo Zimmerman (2016), [Swiftdriver.zip](https://www.zimmers.net/anonftp/pub/cbm/c64/comm/Swiftdriver.zip) | Apache 2.0 — [`../swiftdriver/LICENSE`](../swiftdriver/LICENSE) |
-| **BASIC in this folder** | Chris G (adapted from direct-ACIA versions in parent repo) | Same as parent repo [`LICENSE`](../LICENSE) |
-| **C64U usage notes** | Informed by [v8id-mmo/swiftlink-basic](https://github.com/v8id-mmo/swiftlink-basic) | — |
+## Remote hosts used by the demos
+
+| Program | Target |
+|---------|--------|
+| `SIMPLE`, `HTTP-GET`, `WORD-SEARCH` | `php.retrogamecoders.com:80` |
+| `SIMPLE-WOTD`, `WOTD` | `bbs.retrogamecoders.com:6464` (run [`../bbs.py`](../bbs.py) on the server) |
+
+## Pure C alternative (no driver on disk)
+
+[`../httpget-c/`](../httpget-c/) — single `.prg`, direct ACIA + NMI ring buffer. Deploy with `make run` via [`../runner.py`](../runner.py). See [`../SPEC.md`](../SPEC.md) for architecture and wire-protocol notes.
+
+## Driver source and license
+
+Full upstream tree: **[`../swiftdriver/`](../swiftdriver/)** (`swiftdrvr.asm`, Apache 2.0). On disk the binary is **`SWIFTDRVR`** (8-character name; do not use `swiftdrvr49152` as the C64 filename).
+
+## Tokenize one program for Ultimate HTTP runner
+
+From repo root (`.env` with `C64U_PASSWORD`, `petcat` on PATH):
+
+```bash
+./rbas.sh c64u-kernal/simple.bas
+./rbas.sh c64u-kernal/http-get.bas
+```
 
 ## Which version should I use?
 
 | Situation | Try |
 |-----------|-----|
-| Real SwiftLink cartridge, VICE with direct ACIA, older C64U firmware | Root `*.bas` (direct `PEEK`/`POKE` at `$DE00`) |
-| C64 Ultimate, new firmware, hangs on connect | **`c64u-kernal/*.bas`** + `swiftdrvr.prg` |
-| Still stuck | Confirm menu settings, 600 baud, power cycle; report firmware version |
+| C64 Ultimate, new firmware, hangs on connect | **`c64u-kernal/`** + `kernal.d64`, start with **`SIMPLE`** |
+| Single PRG, no driver file | **`httpget-c/`** (`make run`) |
+| Real SwiftLink cartridge, VICE, older C64U | Root `*.bas` (direct `PEEK`/`POKE` at `$DE00`) |
+| Still stuck | Menu settings, JiffyDOS off, power cycle, try 600 baud |
+
+## Credits
+
+| Component | Source | License |
+|-----------|--------|---------|
+| **SwiftDriver** | Bo Zimmerman, [Swiftdriver.zip](https://www.zimmers.net/anonftp/pub/cbm/c64/comm/Swiftdriver.zip) | Apache 2.0 |
+| **BASIC in this folder** | Chris G | Repo [`LICENSE`](../LICENSE) |
+| **C64U notes** | Informed by [v8id-mmo/swiftlink-basic](https://github.com/v8id-mmo/swiftlink-basic) | — |

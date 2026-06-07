@@ -1,151 +1,116 @@
 c64-ultimate
 ============
 
-This repo is my playground for programming against the C64 (and Ultimate/SwiftLink-style setups) from modern tools. It’s a mix of C64 BASIC, 6502 assembly, and some helper Python to glue everything together.
+Programming the C64 and C64 Ultimate from modern tools: BASIC, cc65 C, Python servers, and SwiftLink-style TCP/HTTP over the Ultimate’s emulated modem.
 
-What’s here
------------
+## What works today (C64 Ultimate)
 
-- **Python BBS server (`bbs.py`)**  
+| Approach | Where | Verified |
+|----------|-------|----------|
+| **BASIC + SwiftDriver** | `c64u-kernal/` on `kernal.d64` | `SIMPLE`, `SIMPLE-WOTD`, `HTTP-GET`, `WORD-SEARCH` |
+| **Pure C (no driver file)** | `httpget-c/` | `httpget.c`, `wotd.c` via `make run` |
+| **Direct ACIA BASIC** | Root `http-get.bas`, `word-search.bas` | Real SwiftLink / VICE / some older C64U setups only |
 
-  This is based on an [original project started by @jalbarracinv](https://github.com/jalbarracinv/python-cbm-petscii-bbs)
+New C64 Ultimate firmware often **hangs** on root programs that poll `$DE00` directly (`PEEK(SR)` bit 3). Use **`c64u-kernal/`** or **`httpget-c/`** instead.
 
-  A very simple PETSCII BBS-style server that a C64 can call over TCP (typically via a SwiftLink-style modem setup or TCP-to-serial bridge).  
-  - Talks PETSCII using the helpers in `funct.py`  
-  - Shows a welcome screen from `seq/welcome.seq` / `seq/colaburger.seq`  
-  - Has a basic per-connection session loop and user count tracking  
-  - Integrates a “Word of the Day” banner via `wotd.py`
+## Quick start — C64 Ultimate readers
 
-- **Word of the Day fetcher (`wotd.py`)**  
-  Small helper that fetches Merriam‑Webster’s Word of the Day over HTTP (RSS), strips it down to a word + short definition, and feeds that into the BBS. This is where the BBS gets the `#WORD#DEFINITION#` header line.
+1. Menu → **ACIA mapping `DE00/NMI`**, **Hardware mode SwiftLink**.
+2. Build the disk: `cd c64u-kernal && ./build-disk.sh`
+3. On the C64: `LOAD"SIMPLE",8` then `RUN` (HTTP smoke test).
+4. Then `HTTP-GET`, `SIMPLE-WOTD`, `WORD-SEARCH`.
 
-- **PETSCII / terminal helpers (`funct.py`)**  
-  Utility functions shared by the Python side:  
-  - `cbmencode` / `cbmdecode` to translate between ASCII and PETSCII  
-  - `send_line`, `send_control_code`, `send_seq` to push text, control codes, and SEQ “graphics” to the C64  
-  - `get_char`, `input_line`, `input_pass` to read keys/lines/passwords from the remote C64 in a way that feels like BASIC’s `GET` and `INPUT`
+Full instructions: [`c64u-kernal/README.md`](c64u-kernal/README.md), [`DISK_CREATION.md`](DISK_CREATION.md).
 
-- **BASIC programs**  
-  - `swiftlink.bas`: C64 BASIC code that talks to the Python server over a SwiftLink-style interface / TCP bridge.  
-  - `wotd.bas`: C64-side program for showing the Word of the Day coming from the Python side.  
-  - `http-get.bas`, `word-search.bas`: HTTP clients using **direct PEEK/POKE** to the 6551 ACIA at `$DE00` (fast on real SwiftLink / VICE; can hang on some C64 Ultimate firmware).  
-  - `http-get-kernal.bas`: same as `http-get.bas` but via **SwiftDriver** + KERNAL (pair with `swiftdrvr.prg`; also in `c64u-kernal/`).  
-  - `modem.bas`, etc. are experiments around dialing/connecting and displaying remote content.
+## What’s in the repo
 
-- **`swiftdriver/` — Bo Zimmerman’s SwiftDriver (full upstream tree)**  
-  Vendored copy of [Swiftdriver.zip](https://www.zimmers.net/anonftp/pub/cbm/c64/comm/Swiftdriver.zip): **`swiftdrvr.asm`**, LADS project, built `swiftdrvr49152.prg`, **Apache License 2.0**. Kept in-repo for study, modification, and so the source does not depend on a single download mirror. See [`swiftdriver/PROVENANCE.md`](swiftdriver/PROVENANCE.md) and [`swiftdriver/README`](swiftdriver/README).
+### `c64u-kernal/` — KERNAL programs for C64 Ultimate
 
-- **`c64u-kernal/` — alternate programs for C64 Ultimate users**  
-  If direct ACIA code freezes on `(S AND 8)=0` after a firmware update, use these instead. They `LOAD "swiftdrvr"` (8-char disk name; same binary as `swiftdriver/swiftdrvr49152.prg`) and talk through KERNAL `OPEN` / `PRINT#` / `GET#` at **600 baud**. See [`c64u-kernal/README.md`](c64u-kernal/README.md) and [`DISK_CREATION.md`](DISK_CREATION.md).
+BASIC programs that `LOAD "swiftdrvr"` and use `OPEN` / `PRINT#` / `GET#` through Bo Zimmerman’s SwiftDriver. **`build-disk.sh`** produces **`kernal.d64`** for Compute! / community distribution.
 
-- **C64 Ultimate PRG runner (`runner.py`, `rbas.sh`, `word-search.bas`)**  
-  - `runner.py`: small helper that HTTP‑posts a `.prg` to a C64 Ultimate (or compatible) using its `/v1/runners:run_prg` endpoint.  
-  - `rbas.sh`: shell script that tokenizes a C64 BASIC v2 listing with `petcat` and then invokes `runner.py`.  
-  - `word-search.bas`: example C64 BASIC v2 program that talks to a remote HTTP server using a SwiftLink‑style interface.
+- **`simple.bas`** — minimal HTTP test (start here)
+- **`simple-wotd.bas`** — raw TCP to the Python BBS
+- **`http-get.bas`** — fetch and format a web page
+- **`word-search.bas`** — Compute! word-search demo (works; slower at 1200 baud)
+- **`swiftdrvr.prg`** — driver binary (disk name `SWIFTDRVR`)
 
-- **C / assembly multiplexing demo (`multiplex.c-c64/`)**  
-  A separate little project showing sprite multiplexing on the C64 in C and 6502 assembly. This is mostly independent of the BBS work, but lives here as part of the broader “C64 experiments” theme.
+### `httpget-c/` — single-PRG C HTTP/TCP clients
 
-Running the Python BBS
-----------------------
+Direct 6551 ACIA access at `$DE00` with an NMI ring buffer (`nmi.s`). No separate driver file. Deploy to the Ultimate with:
 
-Requirements:
+```bash
+cd httpget-c && make run
+```
 
-- Python 3.10+ (what I’ve been testing with)
-- `requests` for `wotd.py`:
+Uses [`runner.py`](runner.py) (HTTP POST to the Ultimate’s `run_prg` API). See [`SPEC.md`](SPEC.md) for wire-protocol gotchas and architecture.
+
+### `swiftdriver/` — Bo Zimmerman’s SwiftDriver (full source)
+
+Vendored from [Swiftdriver.zip](https://www.zimmers.net/anonftp/pub/cbm/c64/comm/Swiftdriver.zip): `swiftdrvr.asm`, LADS project, **Apache License 2.0**. See [`swiftdriver/PROVENANCE.md`](swiftdriver/PROVENANCE.md).
+
+### Python BBS (`bbs.py`, `wotd.py`, `funct.py`)
+
+PETSCII BBS server for C64 clients over TCP (port **6464**). Used by `SIMPLE-WOTD` and `wotd.bas`. Based on [jalbarracinv/python-cbm-petscii-bbs](https://github.com/jalbarracinv/python-cbm-petscii-bbs).
 
 ```bash
 pip install requests
-```
-
-To start the BBS server:
-
-```bash
 python3 bbs.py
 ```
 
-By default it:
+### Root BASIC programs (direct ACIA)
 
-- Listens on TCP port `6464` on all interfaces  
-- Logs new connections and a running user count  
-- Speaks PETSCII only (this is meant to be driven by a C64 client, not a plain telnet terminal)
+`http-get.bas`, `word-search.bas`, `wotd.bas`, `swiftlink.bas` — **direct `PEEK`/`POKE`** at `$DE00`, often at 38400 baud. Fine on hardware SwiftLink or VICE; **not** the first choice on new C64 Ultimate firmware.
 
-On the C64 side, I currently talk to it using a SwiftLink-style setup and `swiftlink.bas`, often via a TCPSerial bridge on the host. Exact wiring/details depend on your hardware and emulator, so you’ll likely need to adjust those for your setup.
+`http-get-kernal.bas` duplicates the KERNAL approach at repo root (canonical copies live in `c64u-kernal/`).
 
-C64 Ultimate: if programs freeze while connecting
--------------------------------------------------
+### Other
 
-Recent C64 Ultimate firmware can leave **direct `$DE00` polling** (`PEEK(SR)` / bit 3) spinning forever. Symptoms: “connecting…” then a hang, or `timeout closed connection` on the host with nothing received.
+- **`httpget-tool/`** — planned BASIC-callable resident HTTP tool (REU storage); scaffold only
+- **`swiftdriver-c/`** — educational C port of SwiftDriver
+- **`multiplex.c-c64/`** — sprite multiplexing demo (separate from HTTP work)
+- **`runner.py`**, **`rbas.sh`** — tokenize BASIC with `petcat`, POST PRG to C64 Ultimate
 
-**Try this first:**
+## C64 Ultimate: programs freeze while connecting?
 
-1. Ultimate menu → **ACIA mapping `DE00/NMI`**, **Hardware mode SwiftLink** (see [`c64u-kernal/README.md`](c64u-kernal/README.md)).
-2. Use the programs in **`c64u-kernal/`** with **`swiftdrvr.prg`** on the same disk — `LOAD "SWIFTDRVR",8,1`, `SYS 49152`, then `RUN` the program.
-3. Tokenize and run via Ultimate HTTP runner, e.g. `./rbas.sh c64u-kernal/word-search.bas`.
+Symptoms: “connecting…” then hang, or host-side timeout with no data.
 
-**Still on direct ACIA?** Root-level `http-get.bas` / `word-search.bas` / `wotd.bas` remain the choice for hardware SwiftLink, VICE, or setups where `POKE CT,31` (38400) works.
+1. Confirm menu: **ACIA `DE00/NMI`**, **SwiftLink** mode.
+2. Use **`kernal.d64`** from `c64u-kernal/`, not root direct-ACIA programs.
+3. Disable **JiffyDOS** for KERNAL/SwiftDriver programs.
+4. Full **power cycle** after modem errors (reset alone may not clear the emulated modem).
 
-Notes / caveats
----------------
+## Deploy a single program to the Ultimate (no disk)
 
-- The BBS and helpers are intentionally minimal and experimental, not a full-featured BBS package.  
-- The PETSCII mapping in `funct.py` is just enough for what I’m doing; some Unicode or punctuation from Merriam‑Webster may not display perfectly and might need further mapping/stripping.  
-- The MySQL account system code in `bbs.py` is mostly stubbed out right now; I hard-code a test user for iteration and keep the DB bits commented until I want real persistence.
-
-Running a BASIC program on a C64 Ultimate
------------------------------------------
-
-This flow uses `petcat` to tokenize a BASIC v2 listing and `runner.py` to send the resulting PRG to a C64 Ultimate over HTTP.
-
-Requirements:
-
-- `petcat` from VICE available on your `PATH` (used by `rbas.sh`)  
-- Python 3.10+  
-- `requests` and `python-dotenv`:
+Requirements: `petcat` (VICE), `requests`, `python-dotenv`, `.env` with `C64U_PASSWORD`.
 
 ```bash
-pip install requests python-dotenv
+./rbas.sh c64u-kernal/simple.bas
 ```
 
-- A `.env` file in this repo with:
+Or for C:
 
 ```bash
-C64U_PASSWORD=your_ultimate_http_password_here
+cd httpget-c && make run
 ```
 
-Usage (for `word-search.bas`):
+`runner.py` POSTs to `http://<your-ultimate>/v1/runners:run_prg`.
 
-```bash
-./rbas.sh
-```
+## Remote hosts (demos)
 
-You can also pass a different BASIC file (including the C64 Ultimate KERNAL variants):
+| Service | Host | Port |
+|---------|------|------|
+| HTTP demos | `php.retrogamecoders.com` | 80 |
+| BBS / WOTD | `bbs.retrogamecoders.com` | 6464 |
 
-```bash
-./rbas.sh my-program.bas
-./rbas.sh c64u-kernal/word-search.bas
-```
+## Project documentation
 
-What `rbas.sh` does:
+| Doc | Contents |
+|-----|----------|
+| [`SPEC.md`](SPEC.md) | Architecture, gotchas, roadmap |
+| [`c64u-kernal/README.md`](c64u-kernal/README.md) | KERNAL programs, baud table, credits |
+| [`DISK_CREATION.md`](DISK_CREATION.md) | Building `kernal.d64` |
 
-- Takes the BASIC filename from `$1` (or defaults to `word-search.bas` if no argument is given).  
-- Pipes that BASIC file through `tr` to lowercase it (VICE `petcat` expects lowercase BASIC keywords when tokenizing).  
-- Calls `petcat -w2 -c` to tokenize as **C64 BASIC v2**, interpreting control‑code mnemonics like `{clr}`, `{rvon}`, `{rvof}`.  
-- Writes `prg.prg`, then runs:
+## Licenses
 
-```bash
-python3 runner.py prg.prg
-```
-
-`runner.py` reads the PRG and POSTs it as `application/octet-stream` to the C64 Ultimate at `http://192.168.0.64/v1/runners:run_prg` with the password from `C64U_PASSWORD`.
-
-Notes:
-
-- The BASIC source can be authored in uppercase (as you’d normally type it on a C64); `rbas.sh` lowercases it only for `petcat`.  
-- Control codes in the BASIC source should use mnemonics that `petcat` understands, e.g. `{CLR}`, `{RVON}`, `{RVOF}`.
-
-Licenses
---------
-
-- **This repo’s own code** (BASIC, Python, etc.) — see [`LICENSE`](LICENSE) at the repo root.
-- **SwiftDriver** (`swiftdriver/`) — **Apache License 2.0**, Bo Zimmerman. Not covered by the root license; see [`swiftdriver/LICENSE`](swiftdriver/LICENSE) and [`swiftdriver/NOTICE`](swiftdriver/NOTICE).
+- **This repo’s own code** (BASIC, Python, C except vendored driver) — [`LICENSE`](LICENSE)
+- **SwiftDriver** (`swiftdriver/`) — **Apache License 2.0**, Bo Zimmerman — [`swiftdriver/LICENSE`](swiftdriver/LICENSE)

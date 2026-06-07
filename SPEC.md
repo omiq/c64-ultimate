@@ -1,6 +1,6 @@
 # C64 Ultimate HTTP — project spec
 
-End-2026-05 snapshot. Captures architecture decisions, current state,
+Snapshot updated 2026-05. Captures architecture decisions, current state,
 and roadmap so any future session (human or AI) can pick up cleanly
 without re-deriving everything from chat history.
 
@@ -12,18 +12,35 @@ a single-PRG, no-extra-driver helper.
 
 ## Architecture decisions
 
-### Direct ACIA + NMI ring buffer (winner)
+### Path A: BASIC + SwiftDriver (C64 Ultimate — verified)
 
-`httpget-c/httpget.c` and `httpget-c/wotd.c` talk to the SwiftLink 6551
-ACIA at `$DE00` directly. NMI ring buffer (`httpget-c/nmi.s`) catches
-RX bytes during screen scroll / disk writes / etc. No external driver
-file required — entire program is one self-contained `.prg`.
+`c64u-kernal/*.bas` load Bo's `swiftdrvr.prg` at `$C000`, `SYS 49152`,
+then `OPEN`/`PRINT#`/`GET#` through KERNAL. Packaged on **`kernal.d64`**
+via `build-disk.sh`.
+
+**Verified on C64 Ultimate:** `SIMPLE`, `SIMPLE-WOTD`, `HTTP-GET`,
+`WORD-SEARCH` (word-search slower but completes). Start readers on
+`SIMPLE`.
 
 Trade-offs:
-- ✓ Single PRG, no `LOAD "SWIFTDRVR",8,1` step beforehand
-- ✓ No KERNAL vector collisions with JiffyDOS etc.
-- ✓ Polled TX is simple
-- ✗ Re-implements what Bo Zimmerman already wrote — bug surface is ours
+- ✓ Matches Ultimate docs and community examples
+- ✓ Best for Compute! / disk distribution
+- ✓ Bo's battle-tested RX path
+- ✗ Needs driver file on disk; JiffyDOS must be off
+- ✗ Never `SYS 49152` inside `GOSUB` (clears return stack)
+
+### Path B: Direct ACIA + NMI ring buffer (single PRG)
+
+`httpget-c/httpget.c` and `httpget-c/wotd.c` talk to the 6551 at `$DE00`
+directly. NMI ring buffer (`httpget-c/nmi.s`) catches RX during screen
+scroll. No external driver file.
+
+Trade-offs:
+- ✓ Single PRG, no `LOAD "SWIFTDRVR"` step
+- ✓ No KERNAL vector collisions with JiffyDOS
+- ✗ Re-implements modem I/O — bug surface is ours
+- ✗ Root direct-ACIA **BASIC** still hangs on new C64U firmware; C path
+  with NMI is separate and works
 
 ### Alternative: SwiftDriver blob wrapper (archived)
 
@@ -51,7 +68,10 @@ work but kept for the audience write-up about porting asm to C.
 | `httpget-c/archive/` | SwiftDriver-blob alternative | Reference only |
 | `httpget-tool/` | Resident BASIC-callable HTTP tool with REU storage | **Scaffold builds, TODOs to fill** |
 | `swiftdriver-c/` | Earlier C-port of Bo's asm | Educational reference |
-| `c64u-kernal/` | BASIC programs + Bo's swiftdrvr | Working |
+| `c64u-kernal/` | BASIC + `kernal.d64` (SwiftDriver) | **Verified:** SIMPLE, SIMPLE-WOTD, HTTP-GET, WORD-SEARCH |
+| `c64u-kernal/simple.bas` | Minimal HTTP smoke test | **Works** — reader entry point |
+| `c64u-kernal/http-get.bas` | HTTP + HTML tags | **Works** |
+| `c64u-kernal/word-search.bas` | HTTP + game | **Works** (slower) |
 
 ## Phase 2 plan: `httpget-tool/`
 
@@ -100,6 +120,13 @@ These cost a multi-hour session to find:
 7. **cc65 `uint32_t` ops are slow** — ~100 cycles/increment. Use
    nested `uint8_t × uint16_t` for timeouts; otherwise "30-second
    timeout" can be 2-minute wall clock.
+8. **BASIC `LD=0` before `IF LD=0 THEN LOAD`** — infinite reload loop
+   after `LOAD` restarts the program. Use `IF LD THEN` / set `LD=1`
+   only inside the load branch.
+9. **`SYS 49152` inside `GOSUB`** — `RETURN WITHOUT GOSUB`. Keep
+   `SYS` at top level; subroutines only `OPEN`/`CLOSE`.
+10. **C64 disk filename `SWIFTDRVR`** — 8 chars; `swiftdrvr49152` is
+    too long for practical use on real drives.
 
 ## Workflow
 
@@ -115,6 +142,7 @@ For BASIC + driver shipping: `c64u-kernal/build-disk.sh` builds
 
 ## Roadmap
 
+- [x] Phase 0: C64U KERNAL disk (`kernal.d64`) — SIMPLE through WORD-SEARCH
 - [x] Phase 1: working pure-C HTTP client (`httpget.c`)
 - [x] Phase 1.5: same engine for raw TCP (`wotd.c`)
 - [ ] Phase 2: BASIC-callable resident tool with REU storage

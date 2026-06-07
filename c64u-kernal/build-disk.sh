@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build kernal.d64 from .bas sources + swiftdrvr49152.prg.
+# Build kernal.d64 from .bas sources + swiftdrvr.prg.
 #
 # Tokenizes each .bas with petcat, then writes everything to a fresh D64
 # with c1541. Driver is written under its 8-char name "swiftdrvr" so the
