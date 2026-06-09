@@ -1,5 +1,5 @@
 ; Minimal NMI ring-buffer ISR for direct-ACIA BASIC programs.
-; Ring page $C200, tail $A8 (ISR), head $A7 (BASIC). Load at $0C00.
+; Ring page $C200, tail $A8 (ISR), head $A7 (BASIC). Load at $C000.
 
 RING      = $C200
 ZP_HEAD   = $A7
@@ -9,7 +9,7 @@ ACIA_STAT = $DE01
 ACIA_CMD  = $DE02
 
 .segment "CODE"
-.org $0C00
+.org $C000
 
 nmi_handler:
         pha
