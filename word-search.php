@@ -1,8 +1,9 @@
 <?php
 // WORD-SEARCH.PHP
-// Buffer the whole response so we can send a fixed Content-Length and avoid
-// Transfer-Encoding: chunked (the chunk-size lines confuse simple C64 clients).
-ob_start();
+// Stream the response (chunked, like index.php) rather than buffering to a
+// fixed Content-Length. A single buffered burst arrives back-to-back at 1200
+// baud with no pauses and overruns the C64's ACIA ring buffer (the grid gets
+// lost). Chunked output trickles per flush, giving BASIC time to keep up.
 
 // List of retro computing words (keep them reasonably short for 10x10)
 $wordList = [
@@ -122,21 +123,24 @@ for ($r = 0; $r < $rows; $r++) {
 
 <?php
 
-// Print grid line by line, CRLF-terminated (no flush: keep one buffered response)
+// Print grid line by line, CRLF-terminated. flush() + a short pause per row so
+// the bytes trickle to the C64 instead of arriving as one back-to-back burst
+// (which overruns the ACIA ring buffer and eats the grid).
 for ($r = 0; $r < $rows; $r++) {
     $line = implode('', $grid[$r]);
     echo " " . $line . "\r\n";
+    flush();
+    usleep(40000); // ~40ms between rows
 }
 echo "\r\n</pre>\r\n";
+flush();
 echo "\r\n<h2>WORDS:</h2><ol>\r\n";
 
 foreach ($selectedWords as $w) {
-    echo "<li>" .$w . "</li>\r\n";
+    echo "<li>" . $w . "</li>\r\n";
+    flush();
+    usleep(20000);
 }
 echo "</ol>\r\n";
 echo "</body></html>\r\n";
-
-// Emit buffered page with a fixed length so the server does not chunk it.
-$out = ob_get_clean();
-header('Content-Length: ' . strlen($out));
-echo $out;
+flush();
