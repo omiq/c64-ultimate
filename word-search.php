@@ -1,5 +1,8 @@
 <?php
 // WORD-SEARCH.PHP
+// Buffer the whole response so we can send a fixed Content-Length and avoid
+// Transfer-Encoding: chunked (the chunk-size lines confuse simple C64 clients).
+ob_start();
 
 // List of retro computing words (keep them reasonably short for 10x10)
 $wordList = [
@@ -114,12 +117,10 @@ for ($r = 0; $r < $rows; $r++) {
 <pre>
 <?php
 
-// Print grid line by line, CRLF-terminated
+// Print grid line by line, CRLF-terminated (no flush: keep one buffered response)
 for ($r = 0; $r < $rows; $r++) {
     $line = implode('', $grid[$r]);
     echo " " . $line . "\r\n";
-    @ob_flush();
-    flush();
 }
 echo "\r\n</pre>";
 echo "\r\n<h2>WORDS:</h2><ol>\r\n";
@@ -129,3 +130,8 @@ foreach ($selectedWords as $w) {
 }
 echo "</ol>\r\n";
 echo "</body></html>\r\n";
+
+// Emit buffered page with a fixed length so the server does not chunk it.
+$out = ob_get_clean();
+header('Content-Length: ' . strlen($out));
+echo $out;
