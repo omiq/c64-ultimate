@@ -111,10 +111,15 @@ for ($r = 0; $r < $rows; $r++) {
 ?>
 
 <html>
+
   <body>
+
   <h1>COMPUTE! WORD SEARCH</h1>
+
 <br>
+
 <pre>
+
 <?php
 
 // Print grid line by line, CRLF-terminated (no flush: keep one buffered response)
@@ -122,7 +127,7 @@ for ($r = 0; $r < $rows; $r++) {
     $line = implode('', $grid[$r]);
     echo " " . $line . "\r\n";
 }
-echo "\r\n</pre>";
+echo "\r\n</pre>\r\n";
 echo "\r\n<h2>WORDS:</h2><ol>\r\n";
 
 foreach ($selectedWords as $w) {
